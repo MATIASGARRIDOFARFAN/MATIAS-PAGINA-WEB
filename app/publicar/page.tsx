@@ -1,6 +1,7 @@
 import { Navbar } from "@/components/navbar"
 import { Footer } from "@/components/footer"
 import { PublishForm } from "@/components/publish-form"
+import { AuthGuard } from "@/components/auth-guard"
 
 export const metadata = {
   title: "Publicar producto · USMP Market",
@@ -8,6 +9,7 @@ export const metadata = {
 
 export default function PublishPage() {
   return (
+    <AuthGuard>
     <div className="flex min-h-screen flex-col">
       <Navbar />
       <main className="flex-1">
@@ -24,5 +26,6 @@ export default function PublishPage() {
       </main>
       <Footer />
     </div>
+    </AuthGuard>
   )
 }

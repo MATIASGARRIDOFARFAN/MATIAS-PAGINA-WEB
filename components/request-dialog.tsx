@@ -4,6 +4,7 @@ import { useState } from "react"
 import { Repeat, ShoppingCart, CheckCircle2, ShieldCheck, Loader2 } from "lucide-react"
 import type { Product } from "@/lib/data"
 import { canRequestProduct } from "@/lib/types"
+import { clientApi } from "@/lib/client-api"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
@@ -48,15 +49,13 @@ export function RequestDialog({
     setLoading(true)
     setError("")
     try {
-      const res = await fetch("/api/requests", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ productId: product.id, type: mode, message }),
+      const data = await clientApi.requests.create({
+        productId: product.id,
+        type: mode,
+        message,
       })
-      const data = await res.json()
-      if (!res.ok) {
-        setError(data.error ?? "No se pudo enviar")
-        if (data.warnings) setError(data.warnings.join(" "))
+      if ("error" in data && data.error) {
+        setError(data.error)
         return
       }
       setDone(true)

@@ -7,6 +7,7 @@ import { Heart, MessageCircle, Plus, User, LogOut, History } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { SearchBar } from "@/components/search-bar"
 import { NotificationBell } from "@/components/notification-bell"
+import { clientApi } from "@/lib/client-api"
 
 interface AuthUser {
   id: string
@@ -19,14 +20,14 @@ export function Navbar() {
   const [user, setUser] = useState<AuthUser | null>(null)
 
   useEffect(() => {
-    fetch("/api/auth/me")
-      .then((r) => r.json())
+    clientApi.auth
+      .me()
       .then((d) => setUser(d.user))
       .catch(() => setUser(null))
   }, [])
 
   async function logout() {
-    await fetch("/api/auth/logout", { method: "POST" })
+    await clientApi.auth.logout()
     setUser(null)
     window.location.href = "/"
   }

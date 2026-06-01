@@ -4,6 +4,7 @@ import { useState } from "react"
 import { ShoppingCart, CheckCircle2, Loader2 } from "lucide-react"
 import type { Product } from "@/lib/data"
 import { canRequestProduct } from "@/lib/types"
+import { clientApi } from "@/lib/client-api"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -26,18 +27,13 @@ export function CheckoutDialog({ product }: { product: Product }) {
     setLoading(true)
     setError("")
     try {
-      const res = await fetch("/api/requests", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          productId: product.id,
-          type: "compra",
-          message: `Solicitud de compra de "${product.title}" por S/ ${product.price}.`,
-        }),
+      const data = await clientApi.requests.create({
+        productId: product.id,
+        type: "compra",
+        message: `Solicitud de compra de "${product.title}" por S/ ${product.price}.`,
       })
-      const data = await res.json()
-      if (!res.ok) {
-        setError(data.error ?? "No se pudo procesar")
+      if ("error" in data && data.error) {
+        setError(data.error)
         return
       }
       setDone(true)

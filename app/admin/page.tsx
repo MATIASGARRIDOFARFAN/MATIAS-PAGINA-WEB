@@ -5,6 +5,7 @@ import { Navbar } from "@/components/navbar"
 import { Footer } from "@/components/footer"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import { clientApi } from "@/lib/client-api"
 
 export default function AdminPage() {
   const [stats, setStats] = useState<Record<string, number>>({})
@@ -14,15 +15,14 @@ export default function AdminPage() {
   const [error, setError] = useState("")
 
   async function load(section: string) {
-    const res = await fetch(`/api/admin?section=${section}`)
-    const data = await res.json()
-    if (!res.ok) {
-      setError(data.error ?? "Acceso denegado")
+    const data = await clientApi.admin.get(section)
+    if ("error" in data && data.error) {
+      setError(data.error)
       return
     }
-    if (section === "overview") setStats(data.stats)
-    if (section === "users") setUsers(data.users)
-    if (section === "reports") setReports(data.reports)
+    if (section === "overview" && "stats" in data) setStats(data.stats ?? {})
+    if (section === "users" && "users" in data) setUsers(data.users ?? [])
+    if (section === "reports" && "reports" in data) setReports(data.reports ?? [])
   }
 
   useEffect(() => {
@@ -30,11 +30,7 @@ export default function AdminPage() {
   }, [tab])
 
   async function action(body: Record<string, string>) {
-    await fetch("/api/admin", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    })
+    await clientApi.admin.patch(body)
     load(tab)
   }
 

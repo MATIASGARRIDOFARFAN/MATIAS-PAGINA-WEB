@@ -2,6 +2,7 @@ import { Suspense } from "react"
 import { Navbar } from "@/components/navbar"
 import { Footer } from "@/components/footer"
 import { ChatWrapper } from "@/components/chat-wrapper"
+import { AuthGuard } from "@/components/auth-guard"
 
 export const metadata = {
   title: "Mensajes · USMP Market",
@@ -9,6 +10,7 @@ export const metadata = {
 
 export default function MessagesPage() {
   return (
+    <AuthGuard>
     <div className="flex min-h-screen flex-col">
       <Navbar />
       <main className="flex-1">
@@ -24,5 +26,6 @@ export default function MessagesPage() {
       </main>
       <Footer />
     </div>
+    </AuthGuard>
   )
 }

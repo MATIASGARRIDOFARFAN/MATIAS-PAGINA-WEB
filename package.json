@@ -5,6 +5,8 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "build:gh-pages": "node scripts/prepare-static-export.mjs && next build",
+    "restore:dev": "node scripts/restore-static-export.mjs",
     "start": "next start",
     "lint": "eslint .",
     "db:generate": "prisma generate",

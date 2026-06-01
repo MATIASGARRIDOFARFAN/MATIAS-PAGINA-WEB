@@ -1,27 +1,20 @@
-import { notFound } from "next/navigation"
-import { Navbar } from "@/components/navbar"
-import { Footer } from "@/components/footer"
-import { ProductDetail } from "@/components/product-detail"
-import { RelatedProducts } from "@/components/related-products"
-import { getProductById, getRelatedProducts } from "@/lib/products-db"
+import { ProductPageClient } from "@/components/product-page-client"
+import { fetchProductIdsForStaticBuild } from "@/lib/products-client"
 
-export const dynamic = "force-dynamic"
+export async function generateStaticParams() {
+  const ids = await fetchProductIdsForStaticBuild()
+  if (ids.length === 0) return [{ id: "_" }]
+  return ids.map((id) => ({ id }))
+}
 
 export default async function ProductPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
-  const product = await getProductById(id)
-  if (!product) notFound()
-
-  const related = await getRelatedProducts(product)
-
-  return (
-    <div className="flex min-h-screen flex-col">
-      <Navbar />
-      <main className="flex-1">
-        <ProductDetail product={product} />
-        <RelatedProducts current={product} products={related} />
-      </main>
-      <Footer />
-    </div>
-  )
+  if (id === "_") {
+    return (
+      <div className="flex min-h-screen items-center justify-center p-8 text-center text-muted-foreground">
+        No hay productos en la base de datos para pregenerar rutas. Agrega productos y vuelve a ejecutar build.
+      </div>
+    )
+  }
+  return <ProductPageClient id={id} />
 }

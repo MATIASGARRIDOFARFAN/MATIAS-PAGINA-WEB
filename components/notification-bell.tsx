@@ -10,6 +10,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { clientApi } from "@/lib/client-api"
 
 interface Notification {
   id: string
@@ -26,9 +27,7 @@ export function NotificationBell() {
 
   async function load() {
     try {
-      const res = await fetch("/api/notifications")
-      if (!res.ok) return
-      const data = await res.json()
+      const data = await clientApi.notifications.list()
       setNotifications(data.notifications ?? [])
       setUnreadCount(data.unreadCount ?? 0)
     } catch {
@@ -43,11 +42,7 @@ export function NotificationBell() {
   }, [])
 
   async function markAllRead() {
-    await fetch("/api/notifications", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ markAllRead: true }),
-    })
+    await clientApi.notifications.markAllRead()
     load()
   }
 

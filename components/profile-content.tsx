@@ -24,6 +24,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { StatusBadge } from "@/components/status-badge"
+import { clientApi } from "@/lib/client-api"
 
 interface ProfileUser {
   id: string
@@ -72,14 +73,16 @@ export function ProfileContent({ user: initialUser, initialProducts, stats }: Pr
     e.preventDefault()
     setSavingProfile(true)
     try {
-      const res = await fetch("/api/profile", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ firstName, lastName, bio, phone }),
-      })
-      const data = await res.json()
-      if (res.ok) {
-        setUser((u) => ({ ...u, ...data.user, name: data.user.name }))
+      const data = await clientApi.profile.patch({ firstName, lastName, bio, phone })
+      if ("user" in data && data.user) {
+        setUser((u) => ({
+          ...u,
+          firstName: data.user.first_name ?? firstName,
+          lastName: data.user.last_name ?? lastName,
+          name: data.user.name ?? u.name,
+          bio: data.user.bio ?? bio,
+          phone: data.user.phone ?? phone,
+        }))
         router.refresh()
       }
     } finally {
@@ -102,10 +105,9 @@ export function ProfileContent({ user: initialUser, initialProducts, stats }: Pr
 
     setDeletingId(product.id)
     try {
-      const res = await fetch(`/api/products/${product.id}`, { method: "DELETE" })
-      if (!res.ok) {
-        const data = await res.json()
-        alert(data.error ?? "No se pudo eliminar")
+      const data = await clientApi.products.delete(product.id)
+      if ("error" in data && data.error) {
+        alert(data.error)
         return
       }
       setProducts((prev) => prev.filter((p) => p.id !== product.id))

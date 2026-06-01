@@ -6,6 +6,8 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
+import { clientApi } from "@/lib/client-api"
+import { createClient } from "@/lib/supabase/client"
 
 interface Conversation {
   id: string
@@ -33,22 +35,32 @@ export function InternalMessenger({ initialUserId, initialProductId }: { initial
   const [myId, setMyId] = useState<string | null>(null)
   const bottomRef = useRef<HTMLDivElement>(null)
 
+  async function enrichConversations(list: Conversation[]) {
+    const ids = [...new Set(list.map((c) => c.otherUser.id))]
+    if (ids.length === 0) return list
+    const supabase = createClient()
+    const { data: profiles } = await supabase.from("profiles").select("id, name, avatar_url").in("id", ids)
+    const map = Object.fromEntries((profiles ?? []).map((p) => [p.id, p]))
+    return list.map((c) => ({
+      ...c,
+      otherUser: {
+        id: c.otherUser.id,
+        name: map[c.otherUser.id]?.name ?? "Usuario",
+        avatar: map[c.otherUser.id]?.avatar_url ?? "/placeholder.svg",
+      },
+    }))
+  }
+
   async function loadConversations() {
-    const res = await fetch("/api/conversations")
-    if (!res.ok) return
-    const data = await res.json()
-    setConversations(data.conversations ?? [])
+    const data = await clientApi.conversations.list()
+    const enriched = await enrichConversations(data.conversations ?? [])
+    setConversations(enriched)
     if (initialUserId && !activeId) {
-      const existing = data.conversations?.find((c: Conversation) => c.otherUser.id === initialUserId)
+      const existing = enriched.find((c) => c.otherUser.id === initialUserId)
       if (existing) setActiveId(existing.id)
       else {
-        const createRes = await fetch("/api/conversations", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ otherUserId: initialUserId, productId: initialProductId }),
-        })
-        const created = await createRes.json()
-        if (created.conversationId) {
+        const created = await clientApi.conversations.create(initialUserId, initialProductId)
+        if ("conversationId" in created && created.conversationId) {
           await loadConversations()
           setActiveId(created.conversationId)
         }
@@ -57,17 +69,13 @@ export function InternalMessenger({ initialUserId, initialProductId }: { initial
   }
 
   async function loadMessages(convId: string) {
-    const res = await fetch(`/api/conversations/${convId}/messages`)
-    if (!res.ok) return
-    const data = await res.json()
+    const data = await clientApi.conversations.messages(convId)
     setMessages(data.messages ?? [])
     setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: "smooth" }), 100)
   }
 
   useEffect(() => {
-    fetch("/api/auth/me")
-      .then((r) => r.json())
-      .then((d) => setMyId(d.user?.id ?? null))
+    clientApi.auth.me().then((d) => setMyId(d.user?.id ?? null))
     loadConversations()
   }, [])
 
@@ -82,20 +90,10 @@ export function InternalMessenger({ initialUserId, initialProductId }: { initial
     if (!text.trim() || !activeId) return
     setWarning(null)
 
-    const res = await fetch(`/api/conversations/${activeId}/messages`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ content: text.trim() }),
-    })
-
-    const data = await res.json()
-    if (!res.ok) {
-      setWarning(data.error + (data.warnings?.length ? `: ${data.warnings.join(" ")}` : ""))
+    const data = await clientApi.conversations.sendMessage(activeId, text.trim())
+    if ("error" in data && data.error) {
+      setWarning(data.error)
       return
-    }
-
-    if (data.warnings?.length) {
-      setWarning(data.warnings.join(" "))
     }
 
     setText("")

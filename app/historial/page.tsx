@@ -6,6 +6,8 @@ import { Navbar } from "@/components/navbar"
 import { Footer } from "@/components/footer"
 import { HISTORY_TYPE_LABELS } from "@/lib/types"
 import { Badge } from "@/components/ui/badge"
+import { AuthGuard } from "@/components/auth-guard"
+import { clientApi } from "@/lib/client-api"
 
 interface HistoryItem {
   id: string
@@ -21,13 +23,14 @@ export default function HistorialPage() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    fetch("/api/history")
-      .then((r) => r.json())
+    clientApi.history
+      .list()
       .then((d) => setHistory(d.history ?? []))
       .finally(() => setLoading(false))
   }, [])
 
   return (
+    <AuthGuard>
     <div className="flex min-h-screen flex-col">
       <Navbar />
       <main className="flex-1">
@@ -76,5 +79,6 @@ export default function HistorialPage() {
       </main>
       <Footer />
     </div>
+    </AuthGuard>
   )
 }

@@ -17,6 +17,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { cn } from "@/lib/utils"
+import { clientApi } from "@/lib/client-api"
 
 const locationLabels: Record<string, string> = {
   biblioteca: "Biblioteca Central",
@@ -74,13 +75,9 @@ export function PublishForm() {
       if (src.startsWith("blob:")) {
         const blob = await fetch(src).then((r) => r.blob())
         const ext = blob.type.split("/")[1] ?? "jpg"
-        const formData = new FormData()
-        formData.append("file", blob, `image-${i}.${ext}`)
-        formData.append("bucket", "product-images")
-        formData.append("path", `${Date.now()}-${i}.${ext}`)
-        const res = await fetch("/api/upload", { method: "POST", body: formData })
-        const data = await res.json()
-        if (res.ok && data.url) uploaded.push(data.url)
+        const file = new File([blob], `image-${i}.${ext}`, { type: blob.type })
+        const data = await clientApi.upload.file(file, `${Date.now()}-${i}.${ext}`)
+        if ("url" in data && data.url) uploaded.push(data.url)
         else uploaded.push("/placeholder.svg")
       } else {
         uploaded.push(src)
@@ -97,28 +94,22 @@ export function PublishForm() {
     try {
       const uploadedImages = await uploadImages()
 
-      const res = await fetch("/api/products", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          title,
-          description,
-          category,
-          faculty: facultyName,
-          career,
-          course,
-          condition,
-          transaction,
-          location: locationLabels[location] ?? location,
-          price: transaction === "intercambio" ? 0 : Number(price),
-          stock: Number(stock),
-          images: uploadedImages,
-        }),
+      const data = await clientApi.products.create({
+        title,
+        description,
+        category,
+        faculty: facultyName,
+        career,
+        course,
+        condition,
+        transaction,
+        location: locationLabels[location] ?? location,
+        price: transaction === "intercambio" ? 0 : Number(price),
+        stock: Number(stock),
+        images: uploadedImages,
       })
-
-      const data = await res.json()
-      if (!res.ok) {
-        setError(data.error ?? "No se pudo publicar el producto")
+      if ("error" in data && data.error) {
+        setError(data.error)
         return
       }
 

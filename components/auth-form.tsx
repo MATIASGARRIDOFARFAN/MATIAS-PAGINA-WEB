@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import { usmpEmailError } from "@/lib/validations"
+import { clientApi } from "@/lib/client-api"
 
 export function AuthForm() {
   const router = useRouter()
@@ -35,22 +36,9 @@ export function AuthForm() {
 
     setLoading(true)
     try {
-      const res = await fetch("/api/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: loginEmail, password: loginPassword }),
-      })
-
-      let data: { error?: string } = {}
-      try {
-        data = await res.json()
-      } catch {
-        setError("El servidor no respondió correctamente. Reinicia con: npm run dev")
-        return
-      }
-
-      if (!res.ok) {
-        setError(data.error ?? "No se pudo iniciar sesión")
+      const data = await clientApi.auth.login(loginEmail, loginPassword)
+      if ("error" in data && data.error) {
+        setError(data.error)
         return
       }
       router.push(redirect)
@@ -79,27 +67,14 @@ export function AuthForm() {
 
     setLoading(true)
     try {
-      const res = await fetch("/api/auth/register", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          firstName: registerFirstName,
-          lastName: registerLastName,
-          email: registerEmail,
-          password: registerPassword,
-        }),
-      })
-
-      let data: { error?: string } = {}
-      try {
-        data = await res.json()
-      } catch {
-        setError("El servidor no respondió correctamente. Reinicia con: npm run dev")
-        return
-      }
-
-      if (!res.ok) {
-        setError(data.error ?? "No se pudo crear la cuenta")
+      const data = await clientApi.auth.register(
+        registerFirstName,
+        registerLastName,
+        registerEmail,
+        registerPassword,
+      )
+      if ("error" in data && data.error) {
+        setError(data.error)
         return
       }
       router.push(redirect)

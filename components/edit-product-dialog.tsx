@@ -21,6 +21,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { clientApi } from "@/lib/client-api"
 
 const locations = [
   "Biblioteca Central",
@@ -84,31 +85,25 @@ export function EditProductDialog({ product, open, onOpenChange, onSaved }: Edit
     setError("")
 
     try {
-      const res = await fetch(`/api/products/${product.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          title,
-          description,
-          category,
-          faculty: facultyName || product.faculty,
-          career,
-          course,
-          condition,
-          transaction,
-          location,
-          price: transaction === "intercambio" ? 0 : Number(price),
-          stock: Number(stock),
-        }),
+      const data = await clientApi.products.update(product.id, {
+        title,
+        description,
+        category,
+        faculty: facultyName || product.faculty,
+        career,
+        course,
+        condition,
+        transaction,
+        location,
+        price: transaction === "intercambio" ? 0 : Number(price),
+        stock: Number(stock),
       })
-
-      const data = await res.json()
-      if (!res.ok) {
-        setError(data.error ?? "No se pudo guardar")
+      if ("error" in data && data.error) {
+        setError(data.error)
         return
       }
 
-      onSaved(data.product)
+      onSaved(data.product!)
       onOpenChange(false)
     } catch {
       setError("Error de conexión")

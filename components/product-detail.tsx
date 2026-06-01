@@ -31,6 +31,7 @@ import { CheckoutDialog } from "@/components/checkout-dialog"
 import { RequestDialog } from "@/components/request-dialog"
 import { StatusBadge } from "@/components/status-badge"
 import { canRequestProduct } from "@/lib/types"
+import { clientApi } from "@/lib/client-api"
 
 export function ProductDetail({ product }: { product: Product }) {
   const [active, setActive] = useState(0)
@@ -38,8 +39,8 @@ export function ProductDetail({ product }: { product: Product }) {
   const [favLoading, setFavLoading] = useState(false)
 
   useEffect(() => {
-    fetch(`/api/favorites/check?productId=${product.id}`)
-      .then((r) => r.json())
+    clientApi.favorites
+      .check(product.id)
       .then((d) => setFav(!!d.favorited))
       .catch(() => {})
   }, [product.id])
@@ -49,15 +50,11 @@ export function ProductDetail({ product }: { product: Product }) {
     setFavLoading(true)
     try {
       if (fav) {
-        await fetch(`/api/favorites?productId=${product.id}`, { method: "DELETE" })
+        await clientApi.favorites.remove(product.id)
         setFav(false)
       } else {
-        const res = await fetch("/api/favorites", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ productId: product.id }),
-        })
-        if (res.status === 401) {
+        const res = await clientApi.favorites.add(product.id)
+        if ("error" in res && res.status === 401) {
           window.location.href = `/login?redirect=/producto/${product.id}`
           return
         }

@@ -8,14 +8,15 @@ import { cn } from "@/lib/utils"
 import { type Product, conditionLabels, transactionLabels } from "@/lib/data"
 import { StatusBadge } from "@/components/status-badge"
 import { Badge } from "@/components/ui/badge"
+import { clientApi } from "@/lib/client-api"
 
 export function ProductCard({ product }: { product: Product }) {
   const [fav, setFav] = useState(false)
   const [loading, setLoading] = useState(false)
 
   useEffect(() => {
-    fetch(`/api/favorites/check?productId=${product.id}`)
-      .then((r) => r.json())
+    clientApi.favorites
+      .check(product.id)
       .then((d) => setFav(!!d.favorited))
       .catch(() => {})
   }, [product.id])
@@ -27,15 +28,15 @@ export function ProductCard({ product }: { product: Product }) {
     setLoading(true)
     try {
       if (fav) {
-        await fetch(`/api/favorites?productId=${product.id}`, { method: "DELETE" })
+        const r = await clientApi.favorites.remove(product.id)
+        if ("error" in r && r.status === 401) {
+          window.location.href = `/login?redirect=/producto/${product.id}`
+          return
+        }
         setFav(false)
       } else {
-        const res = await fetch("/api/favorites", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ productId: product.id }),
-        })
-        if (res.status === 401) {
+        const res = await clientApi.favorites.add(product.id)
+        if ("error" in res && res.status === 401) {
           window.location.href = `/login?redirect=/producto/${product.id}`
           return
         }
