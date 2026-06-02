@@ -3,7 +3,7 @@
 import { useState } from "react"
 import { ShoppingCart, CheckCircle2, Loader2 } from "lucide-react"
 import type { Product } from "@/lib/data"
-import { canRequestProduct } from "@/lib/types"
+import { canRequestProduct } from "@/lib/product-availability"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -20,7 +20,7 @@ export function CheckoutDialog({ product }: { product: Product }) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
 
-  if (!canRequestProduct(product.status)) return null
+  if (!canRequestProduct(product.status, product.stock, product.activeRequests ?? 0)) return null
 
   async function confirmPurchase() {
     setLoading(true)

@@ -19,6 +19,38 @@ export async function updateRequestHistoryStatus(requestId: string, status: stri
   })
 }
 
+type NotifMeta = {
+  requestId?: string
+  productId?: string
+  otherUserId?: string
+  conversationId?: string
+}
+
+function parseMetadata(raw: string | null): NotifMeta {
+  if (!raw) return {}
+  try {
+    return JSON.parse(raw) as NotifMeta
+  } catch {
+    return {}
+  }
+}
+
+function buildChatHref(
+  relatedUserId?: string | null,
+  productId?: string | null,
+  conversationId?: string | null,
+): string | null {
+  if (conversationId) {
+    return `/mensajes?conversationId=${encodeURIComponent(conversationId)}`
+  }
+  if (relatedUserId) {
+    const params = new URLSearchParams({ to: relatedUserId })
+    if (productId) params.set("product", productId)
+    return `/mensajes?${params.toString()}`
+  }
+  return null
+}
+
 function parseProductImage(images: string): string | undefined {
   try {
     const parsed = JSON.parse(images)
@@ -71,24 +103,35 @@ export async function getUserHistory(userId: string) {
     : []
   const userMap = Object.fromEntries(users.map((u) => [u.id, u]))
 
-  const fromEntries = entries.map((e) => ({
-    id: e.id,
-    type: e.type,
-    status: e.status,
-    title: null as string | null,
-    createdAt: e.createdAt.toISOString(),
-    product: e.product
-      ? {
-          id: e.product.id,
-          title: e.product.title,
-          image: parseProductImage(e.product.images || "[]"),
-        }
-      : null,
-    relatedUser: e.relatedUserId ? userMap[e.relatedUserId] ?? null : null,
-  }))
+  const fromEntries = entries.map((e) => {
+    const relatedUser = e.relatedUserId ? userMap[e.relatedUserId] ?? null : null
+    return {
+      id: e.id,
+      type: e.type,
+      status: e.status,
+      title: null as string | null,
+      createdAt: e.createdAt.toISOString(),
+      product: e.product
+        ? {
+            id: e.product.id,
+            title: e.product.title,
+            image: parseProductImage(e.product.images || "[]"),
+          }
+        : null,
+      relatedUser,
+      chatHref: buildChatHref(relatedUser?.id, e.productId, null),
+    }
+  })
 
   const fromRequests = requests.map((r) => {
     const isRequester = r.requesterId === userId
+    const relatedUser = isRequester
+      ? userMap[r.ownerId] ?? { id: r.ownerId, name: r.owner.name, avatar: r.owner.avatar }
+      : userMap[r.requesterId] ?? {
+          id: r.requesterId,
+          name: r.requester.name,
+          avatar: r.requester.avatar,
+        }
     return {
       id: `req-${r.id}`,
       type: isRequester ? "solicitud_enviada" : "solicitud_recibida",
@@ -102,13 +145,8 @@ export async function getUserHistory(userId: string) {
             image: parseProductImage(r.product.images || "[]"),
           }
         : null,
-      relatedUser: isRequester
-        ? userMap[r.ownerId] ?? { id: r.ownerId, name: r.owner.name, avatar: r.owner.avatar }
-        : userMap[r.requesterId] ?? {
-            id: r.requesterId,
-            name: r.requester.name,
-            avatar: r.requester.avatar,
-          },
+      relatedUser,
+      chatHref: buildChatHref(relatedUser.id, r.productId, null),
     }
   })
 
@@ -143,34 +181,83 @@ export async function getUserHistory(userId: string) {
     : []
   const productMap = Object.fromEntries(notifProducts.map((p) => [p.id, p]))
 
-  const fromNotifications = notifications
-    .filter((n) => !seenIds.has(`notif-${n.id}`))
-    .map((n) => {
-      let productId: string | null = null
-      if (n.metadata) {
-        try {
-          productId = (JSON.parse(n.metadata) as { productId?: string }).productId ?? null
-        } catch {
-          productId = null
+  const requestIdsFromNotifs = notifications
+    .map((n) => parseMetadata(n.metadata).requestId)
+    .filter((id): id is string => !!id)
+
+  const requestsById = requestIdsFromNotifs.length
+    ? Object.fromEntries(
+        (
+          await prisma.materialRequest.findMany({
+            where: { id: { in: [...new Set(requestIdsFromNotifs)] } },
+            include: {
+              requester: { select: { id: true, name: true, avatar: true } },
+              owner: { select: { id: true, name: true, avatar: true } },
+            },
+          })
+        ).map((r) => [r.id, r]),
+      )
+    : {}
+
+  const fromNotifications = await Promise.all(
+    notifications
+      .filter((n) => !seenIds.has(`notif-${n.id}`))
+      .map(async (n) => {
+        const meta = parseMetadata(n.metadata)
+        const productId = meta.productId ?? null
+        const product = productId ? productMap[productId] : null
+
+        let relatedUser: { id: string; name: string; avatar: string } | null = null
+        if (meta.otherUserId) {
+          relatedUser = userMap[meta.otherUserId] ?? null
+          if (!relatedUser) {
+            const u = await prisma.user.findUnique({
+              where: { id: meta.otherUserId },
+              select: { id: true, name: true, avatar: true },
+            })
+            relatedUser = u
+          }
         }
-      }
-      const product = productId ? productMap[productId] : null
-      return {
-        id: `notif-${n.id}`,
-        type: n.type,
-        status: "registrada",
-        title: n.title,
-        createdAt: n.createdAt.toISOString(),
-        product: product
-          ? {
-              id: product.id,
-              title: product.title,
-              image: parseProductImage(product.images || "[]"),
-            }
-          : null,
-        relatedUser: null,
-      }
-    })
+
+        const linked = meta.requestId ? requestsById[meta.requestId] : null
+        if (!relatedUser && linked) {
+          relatedUser =
+            linked.ownerId === userId
+              ? linked.requester
+              : linked.owner
+        }
+
+        if (!relatedUser && n.type === "request_received" && productId) {
+          const fallback = await prisma.materialRequest.findFirst({
+            where: { productId, ownerId: userId },
+            orderBy: { createdAt: "desc" },
+            include: { requester: { select: { id: true, name: true, avatar: true } } },
+          })
+          if (fallback) relatedUser = fallback.requester
+        }
+
+        return {
+          id: `notif-${n.id}`,
+          type: n.type,
+          status: "registrada",
+          title: n.title,
+          createdAt: n.createdAt.toISOString(),
+          product: product
+            ? {
+                id: product.id,
+                title: product.title,
+                image: parseProductImage(product.images || "[]"),
+              }
+            : null,
+          relatedUser,
+          chatHref: buildChatHref(
+            relatedUser?.id,
+            productId,
+            meta.conversationId ?? null,
+          ),
+        }
+      }),
+  )
 
   return [...fromEntries, ...fromRequests, ...fromNotifications]
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())

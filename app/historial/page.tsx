@@ -2,10 +2,12 @@
 
 import { useEffect, useState } from "react"
 import Link from "next/link"
+import { MessageCircle } from "lucide-react"
 import { Navbar } from "@/components/navbar"
 import { Footer } from "@/components/footer"
 import { HISTORY_TYPE_LABELS } from "@/lib/types"
 import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
 
 interface HistoryItem {
   id: string
@@ -15,6 +17,7 @@ interface HistoryItem {
   createdAt: string
   product: { id: string; title: string; image?: string } | null
   relatedUser: { id: string; name: string; avatar: string } | null
+  chatHref?: string | null
 }
 
 export default function HistorialPage() {
@@ -47,9 +50,9 @@ export default function HistorialPage() {
               {history.map((item) => (
                 <div
                   key={item.id}
-                  className="flex flex-col gap-2 rounded-xl border border-border bg-card p-4 sm:flex-row sm:items-center sm:justify-between"
+                  className="flex flex-col gap-3 rounded-xl border border-border bg-card p-4 sm:flex-row sm:items-start sm:justify-between"
                 >
-                  <div>
+                  <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
                       <Badge variant="secondary">{HISTORY_TYPE_LABELS[item.type] ?? item.type}</Badge>
                       <Badge variant="outline">{item.status}</Badge>
@@ -65,19 +68,31 @@ export default function HistorialPage() {
                         {item.product.title}
                       </Link>
                     )}
-                    {item.relatedUser && (
-                      <p className="text-sm text-muted-foreground">
-                        Con:{" "}
+                    {item.relatedUser ? (
+                      <p className="mt-1 text-sm text-muted-foreground">
+                        Solicitante:{" "}
                         <Link
                           href={`/usuario/${item.relatedUser.id}`}
-                          className="font-medium hover:text-primary"
+                          className="font-medium text-foreground hover:text-primary"
                         >
                           {item.relatedUser.name}
                         </Link>
                       </p>
+                    ) : item.type === "request_received" || item.type === "solicitud_recibida" ? (
+                      <p className="mt-1 text-sm text-muted-foreground">
+                        Solicitante no identificado en este registro
+                      </p>
+                    ) : null}
+                    {item.chatHref && (
+                      <Button asChild size="sm" variant="secondary" className="mt-2 gap-1.5">
+                        <Link href={item.chatHref}>
+                          <MessageCircle className="size-4" />
+                          Ir al chat
+                        </Link>
+                      </Button>
                     )}
                   </div>
-                  <time className="text-xs text-muted-foreground">
+                  <time className="shrink-0 text-xs text-muted-foreground">
                     {new Date(item.createdAt).toLocaleString("es-PE")}
                   </time>
                 </div>

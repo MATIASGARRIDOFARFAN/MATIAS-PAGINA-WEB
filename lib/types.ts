@@ -60,7 +60,8 @@ export const NOTIFICATION_TYPES = {
   LOGIN_ALERT: "login_alert",
 } as const
 
-export function canRequestProduct(status: string) {
+/** @deprecated Usar canRequestProduct de lib/product-availability con stock y solicitudes activas */
+export function canRequestProductLegacy(status: string) {
   return status === "disponible"
 }
 

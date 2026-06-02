@@ -56,6 +56,8 @@ export interface Product {
   createdAt: string
   featured: boolean
   seller: Seller
+  /** Solicitudes pendientes o aceptadas (no completadas) */
+  activeRequests?: number
 }
 
 export const faculties: Faculty[] = [

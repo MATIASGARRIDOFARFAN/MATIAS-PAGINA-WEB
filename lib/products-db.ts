@@ -2,6 +2,7 @@ import type { Product, Seller, TransactionType, Condition, MaterialStatus } from
 import type { Product as DbProduct, User } from "@prisma/client"
 import { prisma } from "@/lib/prisma"
 import { normalizeAvatarUrl } from "@/lib/security"
+import { countActiveRequests, syncProductAvailability } from "@/lib/product-availability"
 
 type ProductWithSeller = DbProduct & { seller: User }
 
@@ -96,8 +97,15 @@ export async function getProductById(id: string): Promise<Product | null> {
     include: { seller: true },
   })
   if (!row) return null
-  const product = mapDbProduct(row)
-  product.seller = await enrichSellerStats(row.sellerId, product.seller)
+  await syncProductAvailability(id)
+  const rowFresh = await prisma.product.findUnique({
+    where: { id },
+    include: { seller: true },
+  })
+  if (!rowFresh) return null
+  const product = mapDbProduct(rowFresh)
+  product.seller = await enrichSellerStats(rowFresh.sellerId, product.seller)
+  product.activeRequests = await countActiveRequests(id)
   return product
 }
 

@@ -4,7 +4,7 @@ import { requireVerifiedAuth } from "@/lib/api-helpers"
 import { sanitizeText } from "@/lib/security"
 import { createNotification } from "@/lib/notifications"
 import { recordRequestHistory } from "@/lib/history"
-import { canRequestProduct } from "@/lib/types"
+import { canRequestProduct, countActiveRequests, syncProductAvailability } from "@/lib/product-availability"
 import { filterMessageContent } from "@/lib/message-filter"
 import { getOrCreateConversation } from "@/lib/api-helpers"
 
@@ -58,7 +58,8 @@ export async function POST(request: Request) {
     if (product.sellerId === auth.user!.id) {
       return NextResponse.json({ error: "No puedes solicitar tu propio material" }, { status: 400 })
     }
-    if (!canRequestProduct(product.status)) {
+    const activeRequests = await countActiveRequests(productId)
+    if (!canRequestProduct(product.status, product.stock, activeRequests)) {
       return NextResponse.json({ error: "Este material ya no acepta solicitudes" }, { status: 400 })
     }
 
@@ -73,10 +74,7 @@ export async function POST(request: Request) {
       },
     })
 
-    await prisma.product.update({
-      where: { id: productId },
-      data: { status: "reservado" },
-    })
+    await syncProductAvailability(productId)
 
     await recordRequestHistory(
       materialRequest.id,

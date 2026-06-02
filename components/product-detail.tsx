@@ -27,7 +27,7 @@ import { cn } from "@/lib/utils"
 import { CheckoutDialog } from "@/components/checkout-dialog"
 import { RequestDialog } from "@/components/request-dialog"
 import { StatusBadge } from "@/components/status-badge"
-import { canRequestProduct } from "@/lib/types"
+import { canRequestProduct } from "@/lib/product-availability"
 import { RatingDisplay } from "@/components/rating-stars"
 import { RateUserDialog } from "@/components/rate-user-dialog"
 import { normalizeAvatarUrl } from "@/lib/security"
@@ -182,7 +182,11 @@ export function ProductDetail({ product }: { product: Product }) {
           </div>
 
           <div className="mt-6 flex flex-col gap-3">
-            {canRequestProduct(product.status) ? (
+            {canRequestProduct(
+              product.status,
+              product.stock,
+              product.activeRequests ?? 0,
+            ) ? (
               <>
                 {canBuy && <CheckoutDialog product={product} />}
                 {canExchange && <RequestDialog product={product} mode="intercambio" />}

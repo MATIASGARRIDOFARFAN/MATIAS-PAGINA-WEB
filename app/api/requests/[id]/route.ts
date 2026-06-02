@@ -4,6 +4,7 @@ import { requireVerifiedAuth, getOrCreateConversation } from "@/lib/api-helpers"
 import { createNotification } from "@/lib/notifications"
 import { recordTransactionHistory, updateRequestHistoryStatus } from "@/lib/history"
 import type { ProductStatus } from "@/lib/types"
+import { syncProductAvailability } from "@/lib/product-availability"
 
 const STATUS_MAP: Record<string, ProductStatus> = {
   compra: "vendido",
@@ -75,15 +76,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
       data: { status: "rechazada" },
     })
 
-    const otherPending = await prisma.materialRequest.count({
-      where: { productId: materialRequest.productId, status: "pendiente" },
-    })
-    if (otherPending === 0) {
-      await prisma.product.update({
-        where: { id: materialRequest.productId },
-        data: { status: "disponible" },
-      })
-    }
+    await syncProductAvailability(materialRequest.productId)
 
     await updateRequestHistoryStatus(id, "rechazada")
 
@@ -114,10 +107,23 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
       data: { status: "completada" },
     })
 
+    const product = await prisma.product.findUnique({
+      where: { id: materialRequest.productId },
+      select: { stock: true },
+    })
+    const newStock = Math.max(0, (product?.stock ?? 1) - 1)
+
     await prisma.product.update({
       where: { id: materialRequest.productId },
-      data: { status: newProductStatus },
+      data: {
+        stock: newStock,
+        status: newStock <= 0 ? newProductStatus : "disponible",
+      },
     })
+
+    if (newStock > 0) {
+      await syncProductAvailability(materialRequest.productId)
+    }
 
     const historyType =
       materialRequest.type === "compra"

@@ -3,7 +3,7 @@
 import { useState } from "react"
 import { Repeat, ShoppingCart, CheckCircle2, ShieldCheck, Loader2 } from "lucide-react"
 import type { Product } from "@/lib/data"
-import { canRequestProduct } from "@/lib/types"
+import { canRequestProduct } from "@/lib/product-availability"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
@@ -42,7 +42,11 @@ export function RequestDialog({
   }
   const cfg = labels[mode]
   const Icon = cfg.icon
-  const available = canRequestProduct(product.status)
+  const available = canRequestProduct(
+    product.status,
+    product.stock,
+    product.activeRequests ?? 0,
+  )
 
   async function submit() {
     setLoading(true)
