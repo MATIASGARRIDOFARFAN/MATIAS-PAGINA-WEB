@@ -100,7 +100,7 @@ export function ProfileContent({ user: initialUser, initialProducts, stats }: Pr
       const res = await fetch("/api/profile", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ firstName, lastName, bio, phone }),
+        body: JSON.stringify({ firstName, lastName, bio, phone, avatar: user.avatar }),
       })
       const data = await res.json()
       if (res.ok) {
