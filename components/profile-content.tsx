@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useRef } from "react"
 import Image from "next/image"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
@@ -13,6 +13,7 @@ import {
   Plus,
   Pencil,
   Trash2,
+  Camera,
 } from "lucide-react"
 import { type Product, transactionLabels } from "@/lib/data"
 import { Button } from "@/components/ui/button"
@@ -60,6 +61,30 @@ export function ProfileContent({ user: initialUser, initialProducts, stats }: Pr
   const [lastName, setLastName] = useState(initialUser.lastName)
   const [bio, setBio] = useState(initialUser.bio ?? "")
   const [phone, setPhone] = useState(initialUser.phone ?? "")
+  const avatarRef = useRef<HTMLInputElement>(null)
+  const [uploadingAvatar, setUploadingAvatar] = useState(false)
+
+  async function onAvatarChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setUploadingAvatar(true)
+    try {
+      const form = new FormData()
+      form.append("file", file)
+      const res = await fetch("/api/upload/avatar", { method: "POST", body: form })
+      const data = await res.json()
+      if (data.url) {
+        await fetch("/api/profile", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ avatar: data.url }),
+        })
+        setUser((u) => ({ ...u, avatar: data.url }))
+      }
+    } finally {
+      setUploadingAvatar(false)
+    }
+  }
 
   const statCards = [
     { label: "Vistas totales", value: stats.views, icon: Eye },
@@ -120,17 +145,28 @@ export function ProfileContent({ user: initialUser, initialProducts, stats }: Pr
   return (
     <>
       <div className="flex flex-col gap-4 rounded-2xl border border-border bg-card p-6 sm:flex-row sm:items-center">
-        <Avatar className="size-20">
-          <AvatarImage src={user.avatar || "/placeholder.svg"} alt={user.name} />
-          <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
-        </Avatar>
+        <div className="relative">
+          <Avatar className="size-20">
+            <AvatarImage src={user.avatar || "/placeholder.svg"} alt={user.name} />
+            <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
+          </Avatar>
+          <button
+            type="button"
+            onClick={() => avatarRef.current?.click()}
+            disabled={uploadingAvatar}
+            className="absolute bottom-0 right-0 grid size-7 place-items-center rounded-full bg-primary text-primary-foreground shadow"
+          >
+            <Camera className="size-3.5" />
+          </button>
+          <input ref={avatarRef} type="file" accept="image/*" hidden onChange={onAvatarChange} />
+        </div>
         <div className="flex-1">
           <div className="flex items-center gap-2">
             <h1 className="text-xl font-bold">{user.name}</h1>
             {user.verified && <ShieldCheck className="size-5 text-primary" />}
           </div>
-              <p className="text-sm text-muted-foreground">{user.email}</p>
-              <RatingDisplay average={user.ratingAvg} count={user.ratingCount} />
+          <p className="text-sm text-muted-foreground">{user.email}</p>
+          <RatingDisplay average={user.ratingAvg} count={user.ratingCount} />
           {(user.career || user.faculty) && (
             <p className="text-sm text-muted-foreground">
               {[user.career, user.faculty].filter(Boolean).join(" · ")}
@@ -250,3 +286,4 @@ export function ProfileContent({ user: initialUser, initialProducts, stats }: Pr
     </>
   )
 }
+
