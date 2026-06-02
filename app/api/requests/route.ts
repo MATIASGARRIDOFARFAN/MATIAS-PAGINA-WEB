@@ -87,15 +87,20 @@ export async function POST(request: Request) {
       "pendiente",
     )
 
+    const conversation = await getOrCreateConversation(auth.user!.id, product.sellerId, productId)
+
     await createNotification({
       userId: product.sellerId,
       type: "request_received",
       title: "Nueva solicitud de material",
       body: `${auth.user!.name} solicitó "${product.title}" (${type}).`,
-      metadata: { requestId: materialRequest.id, productId },
+      metadata: {
+        requestId: materialRequest.id,
+        productId,
+        otherUserId: auth.user!.id,
+        conversationId: conversation.id,
+      },
     })
-
-    await getOrCreateConversation(auth.user!.id, product.sellerId, productId)
 
     return NextResponse.json({ request: materialRequest }, { status: 201 })
   } catch {

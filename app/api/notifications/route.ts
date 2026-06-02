@@ -15,7 +15,19 @@ export async function GET() {
 
   const unreadCount = await getUnreadCount(auth.user!.id)
 
-  return NextResponse.json({ notifications, unreadCount })
+  const parsed = notifications.map((n) => {
+    let metadata: Record<string, unknown> | null = null
+    if (n.metadata) {
+      try {
+        metadata = JSON.parse(n.metadata) as Record<string, unknown>
+      } catch {
+        metadata = null
+      }
+    }
+    return { ...n, metadata }
+  })
+
+  return NextResponse.json({ notifications: parsed, unreadCount })
 }
 
 export async function PATCH(request: Request) {

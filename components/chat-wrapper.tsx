@@ -9,6 +9,7 @@ export function ChatWrapper() {
     <InternalMessenger
       initialUserId={params.get("to") ?? undefined}
       initialProductId={params.get("product") ?? undefined}
+      initialConversationId={params.get("conversationId") ?? undefined}
     />
   )
 }

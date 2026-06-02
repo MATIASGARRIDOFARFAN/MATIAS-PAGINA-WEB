@@ -26,7 +26,15 @@ interface Message {
   sender: { id: string; name: string; avatar: string }
 }
 
-export function InternalMessenger({ initialUserId, initialProductId }: { initialUserId?: string; initialProductId?: string }) {
+export function InternalMessenger({
+  initialUserId,
+  initialProductId,
+  initialConversationId,
+}: {
+  initialUserId?: string
+  initialProductId?: string
+  initialConversationId?: string
+}) {
   const [conversations, setConversations] = useState<Conversation[]>([])
   const [activeId, setActiveId] = useState<string | null>(null)
   const [messages, setMessages] = useState<Message[]>([])
@@ -40,7 +48,10 @@ export function InternalMessenger({ initialUserId, initialProductId }: { initial
     if (!res.ok) return
     const data = await res.json()
     setConversations(data.conversations ?? [])
-    if (initialUserId && !activeId) {
+    if (initialConversationId && !activeId) {
+      const byId = data.conversations?.find((c: Conversation) => c.id === initialConversationId)
+      if (byId) setActiveId(byId.id)
+    } else if (initialUserId && !activeId) {
       const existing = data.conversations?.find((c: Conversation) => c.otherUser.id === initialUserId)
       if (existing) setActiveId(existing.id)
       else {

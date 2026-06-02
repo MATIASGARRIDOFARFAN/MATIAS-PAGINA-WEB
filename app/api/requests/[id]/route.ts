@@ -43,15 +43,24 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
 
     await updateRequestHistoryStatus(id, "aceptada")
 
+    const conversation = await getOrCreateConversation(
+      materialRequest.requesterId,
+      materialRequest.ownerId,
+      materialRequest.productId,
+    )
+
     await createNotification({
       userId: materialRequest.requesterId,
       type: "request_accepted",
       title: "Solicitud aceptada",
       body: `Tu solicitud de "${materialRequest.product.title}" fue aceptada.`,
-      metadata: { requestId: id },
+      metadata: {
+        requestId: id,
+        productId: materialRequest.productId,
+        otherUserId: materialRequest.ownerId,
+        conversationId: conversation.id,
+      },
     })
-
-    await getOrCreateConversation(materialRequest.requesterId, materialRequest.ownerId, materialRequest.productId)
 
     return NextResponse.json({ request: updated })
   }
@@ -83,7 +92,11 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
       type: "request_rejected",
       title: "Solicitud rechazada",
       body: `Tu solicitud de "${materialRequest.product.title}" fue rechazada.`,
-      metadata: { requestId: id },
+      metadata: {
+        requestId: id,
+        productId: materialRequest.productId,
+        otherUserId: materialRequest.ownerId,
+      },
     })
 
     return NextResponse.json({ request: updated })
@@ -129,7 +142,12 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
       type: notifType,
       title: "Transacción completada",
       body: `Se completó la operación de "${materialRequest.product.title}". Puedes calificar al usuario.`,
-      metadata: { requestId: id, canRate: true },
+      metadata: {
+        requestId: id,
+        productId: materialRequest.productId,
+        otherUserId: materialRequest.ownerId,
+        canRate: true,
+      },
     })
 
     await createNotification({
@@ -137,7 +155,12 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
       type: notifType,
       title: "Transacción completada",
       body: `Se completó la operación de "${materialRequest.product.title}". Puedes calificar al usuario.`,
-      metadata: { requestId: id, canRate: true },
+      metadata: {
+        requestId: id,
+        productId: materialRequest.productId,
+        otherUserId: materialRequest.requesterId,
+        canRate: true,
+      },
     })
 
     return NextResponse.json({ request: updated, canRate: true })

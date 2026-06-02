@@ -38,6 +38,7 @@ export function ProductDetail({ product }: { product: Product }) {
   const [favLoading, setFavLoading] = useState(false)
   const [canRate, setCanRate] = useState(false)
   const [rateRequestId, setRateRequestId] = useState<string | null>(null)
+  const [rateChecked, setRateChecked] = useState(false)
 
   const contactHref = `/mensajes?to=${product.seller.id}&product=${product.id}`
   const sellerProfileHref = `/usuario/${product.seller.id}`
@@ -55,12 +56,15 @@ export function ProductDetail({ product }: { product: Product }) {
 
   useEffect(() => {
     fetch(`/api/ratings/can-rate?toUserId=${product.seller.id}`)
-      .then((r) => r.json())
-      .then((d) => {
-        setCanRate(!!d.canRate)
-        setRateRequestId(d.requestId ?? null)
+      .then(async (res) => {
+        const data = await res.json()
+        if (res.ok) {
+          setCanRate(!!data.canRate)
+          setRateRequestId(data.requestId ?? null)
+        }
       })
       .catch(() => setCanRate(false))
+      .finally(() => setRateChecked(true))
   }, [product.seller.id])
 
   async function toggleFav() {
@@ -251,12 +255,17 @@ export function ProductDetail({ product }: { product: Product }) {
               ))}
             </div>
 
-            {canRate && rateRequestId && (
-              <RateUserDialog
-                toUserId={product.seller.id}
-                toUserName={product.seller.name}
-                requestId={rateRequestId}
-              />
+            {rateChecked && canRate && rateRequestId && (
+              <div className="mt-3 rounded-lg border border-primary/20 bg-primary/5 p-3">
+                <p className="mb-2 text-xs text-muted-foreground">
+                  Completaste una transacción con este vendedor. Tu opinión ayuda a la comunidad.
+                </p>
+                <RateUserDialog
+                  toUserId={product.seller.id}
+                  toUserName={product.seller.name}
+                  requestId={rateRequestId}
+                />
+              </div>
             )}
 
             <Separator className="my-3" />

@@ -33,8 +33,8 @@ export async function POST(request: Request) {
     const stock = Number(body.stock ?? 1)
     const images: string[] = Array.isArray(body.images) ? body.images : ["/placeholder.svg"]
 
-    if (!title || !description || !category || !faculty || !career || !course) {
-      return NextResponse.json({ error: "Completa todos los campos obligatorios" }, { status: 400 })
+    if (!title || !description || !category) {
+      return NextResponse.json({ error: "Completa título, descripción y categoría" }, { status: 400 })
     }
 
     if (!condition || !transaction || !location) {
@@ -65,10 +65,15 @@ export async function POST(request: Request) {
       include: { seller: true },
     })
 
-    await prisma.user.update({
-      where: { id: auth.user!.id },
-      data: { faculty, career },
-    })
+    if (faculty || career) {
+      await prisma.user.update({
+        where: { id: auth.user!.id },
+        data: {
+          ...(faculty && { faculty }),
+          ...(career && { career }),
+        },
+      })
+    }
 
     return NextResponse.json({ product: mapDbProduct(product) }, { status: 201 })
   } catch {

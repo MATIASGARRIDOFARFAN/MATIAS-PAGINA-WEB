@@ -31,7 +31,6 @@ export function PublishForm() {
   const [images, setImages] = useState<string[]>([])
   const [facultyId, setFacultyId] = useState("")
   const [career, setCareer] = useState("")
-  const [course, setCourse] = useState("")
   const [category, setCategory] = useState("")
   const [condition, setCondition] = useState("")
   const [transaction, setTransaction] = useState("")
@@ -46,8 +45,6 @@ export function PublishForm() {
 
   const facultyName = faculties.find((f) => f.id === facultyId)?.name ?? ""
   const careers = faculties.find((f) => f.id === facultyId)?.careers ?? []
-  const courses = careers.find((c) => c.name === career)?.courses ?? []
-
   async function onFiles(e: React.ChangeEvent<HTMLInputElement>) {
     const files = Array.from(e.target.files ?? [])
     const uploaded: string[] = []
@@ -87,9 +84,9 @@ export function PublishForm() {
           title,
           description,
           category,
-          faculty: facultyName,
-          career,
-          course,
+          faculty: facultyName || "",
+          career: career || "",
+          course: "",
           condition,
           transaction,
           location: locationLabels[location] ?? location,
@@ -140,7 +137,6 @@ export function PublishForm() {
               setStock("1")
               setFacultyId("")
               setCareer("")
-              setCourse("")
             }}
           >
             Publicar otro
@@ -266,8 +262,11 @@ export function PublishForm() {
       </section>
 
       <section className="space-y-4 rounded-xl border border-border bg-card p-5">
-        <h2 className="text-sm font-semibold">Estructura académica</h2>
-        <div className="grid gap-4 sm:grid-cols-3">
+        <h2 className="text-sm font-semibold">Estructura académica (opcional)</h2>
+        <p className="text-xs text-muted-foreground">
+          Puedes indicar facultad y carrera para ayudar a otros estudiantes a encontrar tu material.
+        </p>
+        <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-2">
             <Label>Facultad</Label>
             <Select
@@ -275,12 +274,10 @@ export function PublishForm() {
               onValueChange={(v) => {
                 setFacultyId(v)
                 setCareer("")
-                setCourse("")
               }}
-              required
             >
               <SelectTrigger>
-                <SelectValue placeholder="Facultad" />
+                <SelectValue placeholder="Facultad (opcional)" />
               </SelectTrigger>
               <SelectContent>
                 {faculties.map((f) => (
@@ -293,29 +290,14 @@ export function PublishForm() {
           </div>
           <div className="space-y-2">
             <Label>Carrera</Label>
-            <Select value={career} onValueChange={(v) => { setCareer(v); setCourse("") }} disabled={!facultyId} required>
+            <Select value={career} onValueChange={setCareer} disabled={!facultyId}>
               <SelectTrigger>
-                <SelectValue placeholder="Carrera" />
+                <SelectValue placeholder="Carrera (opcional)" />
               </SelectTrigger>
               <SelectContent>
                 {careers.map((c) => (
                   <SelectItem key={c.id} value={c.name}>
                     {c.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-2">
-            <Label>Curso</Label>
-            <Select value={course} onValueChange={setCourse} disabled={!career} required>
-              <SelectTrigger>
-                <SelectValue placeholder="Curso" />
-              </SelectTrigger>
-              <SelectContent>
-                {courses.map((c) => (
-                  <SelectItem key={c} value={c}>
-                    {c}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -390,10 +372,3 @@ export function PublishForm() {
     </form>
   )
 }
-
-
-function onFiles(e: React.ChangeEvent<HTMLInputElement>) {
-    const files = Array.from(e.target.files ?? [])
-    const urls = files.map((f) => URL.createObjectURL(f))
-    setImages((prev) => [...prev, ...urls])
-  }
