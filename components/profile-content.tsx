@@ -149,7 +149,11 @@ export function ProfileContent({ user: initialUser, initialProducts, stats }: Pr
       <div className="flex flex-col gap-4 rounded-2xl border border-border bg-card p-6 sm:flex-row sm:items-center">
         <div className="relative">
           <Avatar className="size-20">
-            <AvatarImage src={user.avatar || "/placeholder.svg"} alt={user.name} />
+            {user.avatar && user.avatar !== "/placeholder.svg" ? (
+              <img src={user.avatar} alt={user.name} className="size-full rounded-full object-cover" />
+            ) : (
+              <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
+            )}
             <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
           </Avatar>
           <button
