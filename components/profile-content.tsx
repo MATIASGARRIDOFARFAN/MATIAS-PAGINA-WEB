@@ -74,11 +74,13 @@ export function ProfileContent({ user: initialUser, initialProducts, stats }: Pr
       const res = await fetch("/api/upload/avatar", { method: "POST", body: form })
       const data = await res.json()
       if (data.url) {
-        await fetch("/api/profile", {
+        const res2 = await fetch("/api/profile", {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ avatar: data.url }),
         })
+        const data2 = await res2.json()
+        console.log("Avatar PATCH response:", data2)
         setUser((u) => ({ ...u, avatar: data.url }))
       }
     } finally {
