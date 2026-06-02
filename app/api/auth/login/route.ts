@@ -55,7 +55,9 @@ export async function POST(request: Request) {
         role: user.role,
       },
     })
-  } catch {
+  } catch (err) {
+    console.error("Login error:", err)
     return NextResponse.json({ error: "Error al iniciar sesión" }, { status: 500 })
   }
 }
+
