@@ -3,7 +3,7 @@
 import Link from "next/link"
 import Image from "next/image"
 import { Heart, Eye, MapPin } from "lucide-react"
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { cn } from "@/lib/utils"
 import { type Product, conditionLabels, transactionLabels } from "@/lib/data"
 import { StatusBadge } from "@/components/status-badge"
@@ -11,6 +11,31 @@ import { Badge } from "@/components/ui/badge"
 
 export function ProductCard({ product }: { product: Product }) {
   const [fav, setFav] = useState(false)
+  const [favLoading, setFavLoading] = useState(false)
+
+  useEffect(() => {
+    fetch(`/api/favorites?productId=${product.id}`)
+      .then((r) => r.json())
+      .then((d) => setFav(!!d.favorited))
+      .catch(() => setFav(false))
+  }, [product.id])
+
+  async function toggleFav(e: React.MouseEvent) {
+    e.preventDefault()
+    if (favLoading) return
+    setFavLoading(true)
+    try {
+      const res = await fetch("/api/favorites", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ productId: product.id }),
+      })
+      const data = await res.json()
+      if (res.ok) setFav(data.favorited)
+    } finally {
+      setFavLoading(false)
+    }
+  }
 
   return (
     <Link
@@ -27,10 +52,8 @@ export function ProductCard({ product }: { product: Product }) {
         />
         <button
           type="button"
-          onClick={(e) => {
-            e.preventDefault()
-            setFav((v) => !v)
-          }}
+          onClick={toggleFav}
+          disabled={favLoading}
           aria-label="Agregar a favoritos"
           className="absolute right-2 top-2 grid size-8 place-items-center rounded-full bg-background/90 text-foreground shadow-sm backdrop-blur transition hover:scale-110"
         >

@@ -1,11 +1,13 @@
 "use client"
 
 import { useEffect, useState, useRef } from "react"
+import Link from "next/link"
 import { Send, ShieldAlert } from "lucide-react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
+import { normalizeAvatarUrl } from "@/lib/security"
 
 interface Conversation {
   id: string
@@ -31,7 +33,7 @@ export function InternalMessenger({ initialUserId, initialProductId }: { initial
   const [text, setText] = useState("")
   const [warning, setWarning] = useState<string | null>(null)
   const [myId, setMyId] = useState<string | null>(null)
-  const bottomRef = useRef<HTMLDivElement>(null)
+  const messagesContainerRef = useRef<HTMLDivElement>(null)
 
   async function loadConversations() {
     const res = await fetch("/api/conversations")
@@ -56,12 +58,18 @@ export function InternalMessenger({ initialUserId, initialProductId }: { initial
     }
   }
 
-  async function loadMessages(convId: string) {
+  async function loadMessages(convId: string, scrollToBottom = false) {
     const res = await fetch(`/api/conversations/${convId}/messages`)
     if (!res.ok) return
     const data = await res.json()
     setMessages(data.messages ?? [])
-    setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: "smooth" }), 100)
+
+    if (scrollToBottom && messagesContainerRef.current) {
+      requestAnimationFrame(() => {
+        const el = messagesContainerRef.current
+        if (el) el.scrollTop = el.scrollHeight
+      })
+    }
   }
 
   useEffect(() => {
@@ -72,8 +80,9 @@ export function InternalMessenger({ initialUserId, initialProductId }: { initial
   }, [])
 
   useEffect(() => {
-    if (activeId) loadMessages(activeId)
-    const interval = activeId ? setInterval(() => loadMessages(activeId), 5000) : undefined
+    if (!activeId) return
+    loadMessages(activeId, false)
+    const interval = setInterval(() => loadMessages(activeId, false), 5000)
     return () => clearInterval(interval)
   }, [activeId])
 
@@ -99,11 +108,32 @@ export function InternalMessenger({ initialUserId, initialProductId }: { initial
     }
 
     setText("")
-    loadMessages(activeId)
+    await loadMessages(activeId, true)
     loadConversations()
   }
 
   const active = conversations.find((c) => c.id === activeId)
+
+  function UserLink({
+    user,
+    className,
+  }: {
+    user: { id: string; name: string; avatar: string }
+    className?: string
+  }) {
+    const avatarSrc = normalizeAvatarUrl(user.avatar) || "/placeholder.svg"
+    return (
+      <Link href={`/usuario/${user.id}`} className={cn("flex items-center gap-3 hover:opacity-90", className)}>
+        <Avatar className="size-10 shrink-0">
+          <AvatarImage src={avatarSrc} alt={user.name} />
+          <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
+        </Avatar>
+        <div className="min-w-0">
+          <p className="truncate text-sm font-medium hover:text-primary">{user.name}</p>
+        </div>
+      </Link>
+    )
+  }
 
   return (
     <div className="grid h-[560px] overflow-hidden rounded-2xl border border-border bg-card sm:grid-cols-[280px_1fr]">
@@ -112,26 +142,26 @@ export function InternalMessenger({ initialUserId, initialProductId }: { initial
           <p className="p-4 text-sm text-muted-foreground">No tienes conversaciones aún.</p>
         ) : (
           conversations.map((c) => (
-            <button
+            <div
               key={c.id}
-              type="button"
+              role="button"
+              tabIndex={0}
               onClick={() => setActiveId(c.id)}
+              onKeyDown={(e) => e.key === "Enter" && setActiveId(c.id)}
               className={cn(
-                "flex w-full items-center gap-3 border-b border-border p-3 text-left transition-colors hover:bg-secondary",
+                "flex w-full cursor-pointer items-center gap-3 border-b border-border p-3 text-left transition-colors hover:bg-secondary",
                 activeId === c.id && "bg-accent",
               )}
             >
-              <Avatar className="size-10">
-                <AvatarImage src={c.otherUser.avatar || "/placeholder.svg"} alt={c.otherUser.name} />
-                <AvatarFallback>{c.otherUser.name.charAt(0)}</AvatarFallback>
-              </Avatar>
+              <div onClick={(e) => e.stopPropagation()} className="shrink-0">
+                <UserLink user={c.otherUser} />
+              </div>
               <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-medium">{c.otherUser.name}</p>
                 <p className="truncate text-xs text-muted-foreground">
                   {c.lastMessage?.content ?? c.product?.title ?? "Sin mensajes"}
                 </p>
               </div>
-            </button>
+            </div>
           ))
         )}
       </div>
@@ -139,17 +169,20 @@ export function InternalMessenger({ initialUserId, initialProductId }: { initial
       <div className="flex flex-col">
         {active ? (
           <>
-            <div className="flex items-center gap-3 border-b border-border p-3">
-              <Avatar className="size-9">
-                <AvatarImage src={active.otherUser.avatar || "/placeholder.svg"} alt={active.otherUser.name} />
-                <AvatarFallback>{active.otherUser.name.charAt(0)}</AvatarFallback>
-              </Avatar>
-              <div>
-                <p className="text-sm font-medium">{active.otherUser.name}</p>
-                <p className="text-xs text-muted-foreground">
-                  {active.product ? `Sobre: ${active.product.title}` : "Chat interno USMP Market"}
-                </p>
-              </div>
+            <div className="border-b border-border p-3">
+              <UserLink user={active.otherUser} />
+              <p className="mt-1 pl-[52px] text-xs text-muted-foreground">
+                {active.product ? (
+                  <>
+                    Sobre:{" "}
+                    <Link href={`/producto/${active.product.id}`} className="hover:text-primary">
+                      {active.product.title}
+                    </Link>
+                  </>
+                ) : (
+                  "Chat interno USMP Market"
+                )}
+              </p>
             </div>
 
             <div className="flex items-center gap-2 border-b border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-200">
@@ -157,7 +190,10 @@ export function InternalMessenger({ initialUserId, initialProductId }: { initial
               No compartas teléfonos, correos personales ni enlaces. Toda la comunicación es interna.
             </div>
 
-            <div className="flex flex-1 flex-col gap-2 overflow-y-auto bg-secondary/30 p-4">
+            <div
+              ref={messagesContainerRef}
+              className="flex flex-1 flex-col gap-2 overflow-y-auto bg-secondary/30 p-4"
+            >
               {messages.map((m) => (
                 <div
                   key={m.id}
@@ -174,7 +210,6 @@ export function InternalMessenger({ initialUserId, initialProductId }: { initial
                   )}
                 </div>
               ))}
-              <div ref={bottomRef} />
             </div>
 
             {warning && (

@@ -29,6 +29,7 @@ export interface Seller {
   career: string
   verified: boolean
   rating: number
+  ratingCount: number
   sales: number
   exchanges: number
   listings: number
@@ -137,6 +138,7 @@ const sellers: Seller[] = [
     career: "Ingeniería de Sistemas",
     verified: true,
     rating: 4.9,
+    ratingCount: 28,
     sales: 32,
     exchanges: 11,
     listings: 8,
@@ -151,6 +153,7 @@ const sellers: Seller[] = [
     career: "Arquitectura",
     verified: true,
     rating: 4.7,
+    ratingCount: 15,
     sales: 18,
     exchanges: 6,
     listings: 5,
@@ -165,6 +168,7 @@ const sellers: Seller[] = [
     career: "Administración",
     verified: true,
     rating: 4.8,
+    ratingCount: 20,
     sales: 24,
     exchanges: 9,
     listings: 6,

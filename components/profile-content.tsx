@@ -93,7 +93,7 @@ export function ProfileContent({ user: initialUser, initialProducts, stats }: Pr
   const statCards = [
     { label: "Vistas totales", value: stats.views, icon: Eye },
     { label: "Publicaciones", value: stats.listings, icon: ShoppingBag },
-    { label: "Favoritos", value: stats.favorites, icon: Heart },
+    { label: "Favoritos en tus publicaciones", value: stats.favorites, icon: Heart },
     { label: "Calificación", value: user.ratingAvg.toFixed(1), icon: Star },
   ]
 

@@ -2,7 +2,7 @@ import { NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { requireVerifiedAuth, getOrCreateConversation } from "@/lib/api-helpers"
 import { createNotification } from "@/lib/notifications"
-import { recordTransactionHistory } from "@/lib/history"
+import { recordTransactionHistory, updateRequestHistoryStatus } from "@/lib/history"
 import type { ProductStatus } from "@/lib/types"
 
 const STATUS_MAP: Record<string, ProductStatus> = {
@@ -41,6 +41,8 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
       data: { status: "aceptada" },
     })
 
+    await updateRequestHistoryStatus(id, "aceptada")
+
     await createNotification({
       userId: materialRequest.requesterId,
       type: "request_accepted",
@@ -73,6 +75,8 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
         data: { status: "disponible" },
       })
     }
+
+    await updateRequestHistoryStatus(id, "rechazada")
 
     await createNotification({
       userId: materialRequest.requesterId,

@@ -4,7 +4,7 @@ import { jwtVerify } from "jose"
 
 const SESSION_COOKIE = "usmp_session"
 
-const AUTH_PATHS = ["/publicar", "/perfil", "/mensajes", "/historial"]
+const AUTH_PATHS = ["/publicar", "/perfil", "/mensajes", "/historial", "/favoritos"]
 const ADMIN_PATHS = ["/admin"]
 
 async function getSessionPayload(request: NextRequest) {
@@ -44,5 +44,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/publicar", "/perfil", "/mensajes", "/historial", "/admin"],
+  matcher: ["/publicar", "/perfil", "/mensajes", "/historial", "/favoritos", "/admin"],
 }

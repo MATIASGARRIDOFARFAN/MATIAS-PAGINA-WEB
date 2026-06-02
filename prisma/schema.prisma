@@ -26,10 +26,12 @@ model User {
   verifyCodeExpiry DateTime?
   ratingAvg        Float     @default(0)
   ratingCount      Int       @default(0)
+  profileViews     Int       @default(0)
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
 
   products           Product[]
+  favorites          Favorite[]
   requestsSent       MaterialRequest[] @relation("Requester")
   requestsReceived   MaterialRequest[] @relation("Owner")
   messagesSent       Message[]
@@ -72,11 +74,25 @@ model Product {
   reports     Report[]
   history     HistoryEntry[]
   conversations Conversation[]
+  favoritedBy     Favorite[]
 
   @@index([category])
   @@index([sellerId])
   @@index([status])
   @@index([createdAt])
+}
+
+model Favorite {
+  id        String   @id @default(cuid())
+  userId    String
+  productId String
+  createdAt DateTime @default(now())
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, productId])
+  @@index([userId])
 }
 
 model MaterialRequest {

@@ -2,15 +2,12 @@
 
 import Image from "next/image"
 import Link from "next/link"
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import {
   Heart,
   Eye,
   MapPin,
   ShieldCheck,
-  Star,
-  ShoppingCart,
-  Repeat,
   MessageCircle,
   Calendar,
   Award,
@@ -31,15 +28,56 @@ import { CheckoutDialog } from "@/components/checkout-dialog"
 import { RequestDialog } from "@/components/request-dialog"
 import { StatusBadge } from "@/components/status-badge"
 import { canRequestProduct } from "@/lib/types"
+import { RatingDisplay } from "@/components/rating-stars"
+import { RateUserDialog } from "@/components/rate-user-dialog"
+import { normalizeAvatarUrl } from "@/lib/security"
 
 export function ProductDetail({ product }: { product: Product }) {
   const [active, setActive] = useState(0)
   const [fav, setFav] = useState(false)
+  const [favLoading, setFavLoading] = useState(false)
+  const [canRate, setCanRate] = useState(false)
+  const [rateRequestId, setRateRequestId] = useState<string | null>(null)
 
   const contactHref = `/mensajes?to=${product.seller.id}&product=${product.id}`
+  const sellerProfileHref = `/usuario/${product.seller.id}`
+  const sellerAvatar = normalizeAvatarUrl(product.seller.avatar) || "/placeholder.svg"
 
   const canBuy = product.transaction !== "intercambio"
   const canExchange = product.transaction !== "venta"
+
+  useEffect(() => {
+    fetch(`/api/favorites?productId=${product.id}`)
+      .then((r) => r.json())
+      .then((d) => setFav(!!d.favorited))
+      .catch(() => setFav(false))
+  }, [product.id])
+
+  useEffect(() => {
+    fetch(`/api/ratings/can-rate?toUserId=${product.seller.id}`)
+      .then((r) => r.json())
+      .then((d) => {
+        setCanRate(!!d.canRate)
+        setRateRequestId(d.requestId ?? null)
+      })
+      .catch(() => setCanRate(false))
+  }, [product.seller.id])
+
+  async function toggleFav() {
+    if (favLoading) return
+    setFavLoading(true)
+    try {
+      const res = await fetch("/api/favorites", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ productId: product.id }),
+      })
+      const data = await res.json()
+      if (res.ok) setFav(data.favorited)
+    } finally {
+      setFavLoading(false)
+    }
+  }
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
@@ -54,7 +92,6 @@ export function ProductDetail({ product }: { product: Product }) {
       </nav>
 
       <div className="grid gap-8 lg:grid-cols-[1.1fr_1fr]">
-        {/* Gallery */}
         <div>
           <div className="group relative aspect-square overflow-hidden rounded-2xl border border-border bg-secondary">
             <Image
@@ -88,7 +125,6 @@ export function ProductDetail({ product }: { product: Product }) {
           )}
         </div>
 
-        {/* Info */}
         <div>
           <div className="flex flex-wrap items-center gap-2">
             <StatusBadge status={product.status} />
@@ -121,7 +157,6 @@ export function ProductDetail({ product }: { product: Product }) {
             {product.stock} disponible{product.stock > 1 ? "s" : ""}
           </p>
 
-          {/* Academic tags */}
           <div className="mt-5 grid grid-cols-3 gap-2 rounded-xl border border-border bg-card p-3 text-center text-sm">
             <div>
               <p className="text-xs text-muted-foreground">Facultad</p>
@@ -142,7 +177,6 @@ export function ProductDetail({ product }: { product: Product }) {
             Entrega en <span className="font-medium text-foreground">{product.location}</span>
           </div>
 
-          {/* Actions */}
           <div className="mt-6 flex flex-col gap-3">
             {canRequestProduct(product.status) ? (
               <>
@@ -165,7 +199,8 @@ export function ProductDetail({ product }: { product: Product }) {
               <Button
                 variant="outline"
                 size="lg"
-                onClick={() => setFav((v) => !v)}
+                onClick={toggleFav}
+                disabled={favLoading}
                 className="gap-2"
                 aria-pressed={fav}
               >
@@ -180,25 +215,26 @@ export function ProductDetail({ product }: { product: Product }) {
             </p>
           </div>
 
-          {/* Seller */}
           <div className="mt-6 rounded-xl border border-border bg-card p-4">
-            <div className="flex items-center gap-3">
+            <Link href={sellerProfileHref} className="flex items-center gap-3 hover:opacity-90">
               <Avatar className="size-12">
-                <AvatarImage src={product.seller.avatar || "/placeholder.svg"} alt={product.seller.name} />
+                <AvatarImage key={sellerAvatar} src={sellerAvatar} alt={product.seller.name} />
                 <AvatarFallback>{product.seller.name.charAt(0)}</AvatarFallback>
               </Avatar>
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-1.5">
-                  <p className="truncate font-semibold">{product.seller.name}</p>
+                  <p className="truncate font-semibold hover:text-primary">{product.seller.name}</p>
                   {product.seller.verified && <ShieldCheck className="size-4 shrink-0 text-primary" />}
                 </div>
                 <p className="truncate text-xs text-muted-foreground">{product.seller.career}</p>
+                <div className="mt-1">
+                  <RatingDisplay
+                    average={product.seller.rating}
+                    count={product.seller.ratingCount}
+                  />
+                </div>
               </div>
-              <div className="flex items-center gap-1 text-sm font-medium">
-                <Star className="size-4 fill-primary text-primary" />
-                {product.seller.rating}
-              </div>
-            </div>
+            </Link>
 
             <div className="mt-3 flex flex-wrap gap-1.5">
               {product.seller.badges.map((b) => (
@@ -214,6 +250,14 @@ export function ProductDetail({ product }: { product: Product }) {
                 </Badge>
               ))}
             </div>
+
+            {canRate && rateRequestId && (
+              <RateUserDialog
+                toUserId={product.seller.id}
+                toUserName={product.seller.name}
+                requestId={rateRequestId}
+              />
+            )}
 
             <Separator className="my-3" />
             <div className="grid grid-cols-3 text-center text-sm">
@@ -234,7 +278,6 @@ export function ProductDetail({ product }: { product: Product }) {
         </div>
       </div>
 
-      {/* Description */}
       <div className="mt-10 max-w-3xl">
         <h2 className="text-lg font-semibold">Descripción</h2>
         <p className="mt-3 text-pretty leading-relaxed text-muted-foreground">{product.description}</p>

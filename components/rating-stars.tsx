@@ -46,6 +46,10 @@ export function RatingDisplay({
   average: number
   count: number
 }) {
+  if (count === 0) {
+    return <span className="text-sm text-muted-foreground">Sin calificaciones</span>
+  }
+
   return (
     <div className="flex items-center gap-1.5 text-sm">
       <RatingStars value={Math.round(average)} readonly size="sm" />

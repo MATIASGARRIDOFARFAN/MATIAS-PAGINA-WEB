@@ -14,21 +14,43 @@ function parseImages(raw: string): string[] {
   }
 }
 
-export function mapDbProduct(row: ProductWithSeller): Product {
-  const seller: Seller = {
-    id: row.seller.id,
-    name: row.seller.name,
-    email: row.seller.email,
-    avatar: normalizeAvatarUrl(row.seller.avatar) || row.seller.avatar,
-    faculty: row.seller.faculty ?? row.faculty,
-    career: row.seller.career ?? row.career,
-    verified: row.seller.verified,
-    rating: row.seller.ratingAvg || 4.8,
+function mapSellerBase(row: User, productRow?: DbProduct): Seller {
+  return {
+    id: row.id,
+    name: row.name,
+    email: row.email,
+    avatar: normalizeAvatarUrl(row.avatar) || row.avatar,
+    faculty: row.faculty ?? productRow?.faculty ?? "",
+    career: row.career ?? productRow?.career ?? "",
+    verified: row.emailVerified,
+    rating: row.ratingAvg,
+    ratingCount: row.ratingCount,
     sales: 0,
     exchanges: 0,
     listings: 0,
-    badges: row.seller.verified ? ["Estudiante Verificado"] : [],
+    badges: row.emailVerified ? ["Estudiante Verificado"] : [],
   }
+}
+
+export async function enrichSellerStats(sellerId: string, base: Seller): Promise<Seller> {
+  const [listings, sales, exchanges] = await Promise.all([
+    prisma.product.count({ where: { sellerId } }),
+    prisma.materialRequest.count({
+      where: { ownerId: sellerId, type: "compra", status: "completada" },
+    }),
+    prisma.materialRequest.count({
+      where: {
+        status: "completada",
+        type: "intercambio",
+        OR: [{ ownerId: sellerId }, { requesterId: sellerId }],
+      },
+    }),
+  ])
+  return { ...base, listings, sales, exchanges }
+}
+
+export function mapDbProduct(row: ProductWithSeller): Product {
+  const seller = mapSellerBase(row.seller, row)
 
   return {
     id: row.id,
@@ -53,6 +75,13 @@ export function mapDbProduct(row: ProductWithSeller): Product {
   }
 }
 
+export async function incrementProductViews(id: string) {
+  await prisma.product.update({
+    where: { id },
+    data: { views: { increment: 1 } },
+  })
+}
+
 export async function getAllProducts(): Promise<Product[]> {
   const rows = await prisma.product.findMany({
     include: { seller: true },
@@ -66,7 +95,10 @@ export async function getProductById(id: string): Promise<Product | null> {
     where: { id },
     include: { seller: true },
   })
-  return row ? mapDbProduct(row) : null
+  if (!row) return null
+  const product = mapDbProduct(row)
+  product.seller = await enrichSellerStats(row.sellerId, product.seller)
+  return product
 }
 
 export async function getProductsBySellerId(sellerId: string): Promise<Product[]> {

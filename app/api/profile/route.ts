@@ -31,7 +31,7 @@ export async function GET() {
     },
     products,
     stats: {
-      views: products.reduce((sum, p) => sum + p.views, 0),
+      views: products.reduce((sum, p) => sum + p.views, 0) + (auth.user!.profileViews ?? 0),
       listings: products.length,
       favorites: products.reduce((sum, p) => sum + p.favorites, 0),
     },

@@ -11,6 +11,7 @@ interface HistoryItem {
   id: string
   type: string
   status: string
+  title?: string | null
   createdAt: string
   product: { id: string; title: string; image?: string } | null
   relatedUser: { id: string; name: string; avatar: string } | null
@@ -53,6 +54,9 @@ export default function HistorialPage() {
                       <Badge variant="secondary">{HISTORY_TYPE_LABELS[item.type] ?? item.type}</Badge>
                       <Badge variant="outline">{item.status}</Badge>
                     </div>
+                    {item.title && (
+                      <p className="mt-1 text-sm font-medium">{item.title}</p>
+                    )}
                     {item.product && (
                       <Link
                         href={`/producto/${item.product.id}`}
@@ -62,7 +66,15 @@ export default function HistorialPage() {
                       </Link>
                     )}
                     {item.relatedUser && (
-                      <p className="text-sm text-muted-foreground">Con: {item.relatedUser.name}</p>
+                      <p className="text-sm text-muted-foreground">
+                        Con:{" "}
+                        <Link
+                          href={`/usuario/${item.relatedUser.id}`}
+                          className="font-medium hover:text-primary"
+                        >
+                          {item.relatedUser.name}
+                        </Link>
+                      </p>
                     )}
                   </div>
                   <time className="text-xs text-muted-foreground">

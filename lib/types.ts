@@ -38,6 +38,15 @@ export const HISTORY_TYPE_LABELS: Record<string, string> = {
   intercambio: "Intercambio",
   solicitud_enviada: "Solicitud enviada",
   solicitud_recibida: "Solicitud recibida",
+  actividad: "Actividad",
+  request_received: "Solicitud recibida",
+  request_accepted: "Solicitud aceptada",
+  request_rejected: "Solicitud rechazada",
+  message_received: "Mensaje",
+  purchase_completed: "Compra completada",
+  loan_completed: "Préstamo completado",
+  rating_received: "Calificación",
+  login_alert: "Inicio de sesión",
 }
 
 export const NOTIFICATION_TYPES = {

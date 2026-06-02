@@ -3,7 +3,7 @@ import { Navbar } from "@/components/navbar"
 import { Footer } from "@/components/footer"
 import { ProductDetail } from "@/components/product-detail"
 import { RelatedProducts } from "@/components/related-products"
-import { getProductById, getRelatedProducts } from "@/lib/products-db"
+import { getProductById, getRelatedProducts, incrementProductViews } from "@/lib/products-db"
 
 export const dynamic = "force-dynamic"
 
@@ -11,6 +11,9 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
   const { id } = await params
   const product = await getProductById(id)
   if (!product) notFound()
+
+  await incrementProductViews(id)
+  product.views += 1
 
   const related = await getRelatedProducts(product)
 
