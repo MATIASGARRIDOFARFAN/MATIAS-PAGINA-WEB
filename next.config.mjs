@@ -4,8 +4,12 @@ const nextConfig = {
     ignoreBuildErrors: true,
   },
   images: {
-    unoptimized: true,
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "jaoglvumppcxzyetiiiv.supabase.co",
+      },
+    ],
   },
 }
-
 export default nextConfig
