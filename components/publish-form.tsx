@@ -48,10 +48,17 @@ export function PublishForm() {
   const careers = faculties.find((f) => f.id === facultyId)?.careers ?? []
   const courses = careers.find((c) => c.name === career)?.courses ?? []
 
-  function onFiles(e: React.ChangeEvent<HTMLInputElement>) {
+  async function onFiles(e: React.ChangeEvent<HTMLInputElement>) {
     const files = Array.from(e.target.files ?? [])
-    const urls = files.map((f) => URL.createObjectURL(f))
-    setImages((prev) => [...prev, ...urls])
+    const uploaded: string[] = []
+    for (const file of files) {
+        const form = new FormData()
+        form.append("file", file)
+        const res = await fetch("/api/upload", { method: "POST", body: form })
+        const data = await res.json()
+        if (data.url) uploaded.push(data.url)
+    }
+    setImages((prev) => [...prev, ...uploaded])
   }
 
   function removeImage(i: number) {
@@ -383,3 +390,10 @@ export function PublishForm() {
     </form>
   )
 }
+
+
+function onFiles(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(e.target.files ?? [])
+    const urls = files.map((f) => URL.createObjectURL(f))
+    setImages((prev) => [...prev, ...urls])
+  }
