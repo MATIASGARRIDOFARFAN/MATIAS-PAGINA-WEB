@@ -104,7 +104,8 @@ export function ProfileContent({ user: initialUser, initialProducts, stats }: Pr
       })
       const data = await res.json()
       if (res.ok) {
-        setUser((u) => ({ ...u, ...data.user, name: data.user.name }))
+        const currentAvatar = user.avatar
+        setUser((u) => ({ ...u, ...data.user, name: data.user.name, avatar: currentAvatar }))
         router.refresh()
       }
     } finally {
