@@ -106,7 +106,6 @@ export function ProfileContent({ user: initialUser, initialProducts, stats }: Pr
       if (res.ok) {
         const currentAvatar = user.avatar
         setUser((u) => ({ ...u, ...data.user, name: data.user.name, avatar: currentAvatar }))
-        router.refresh()
       }
     } finally {
       setSavingProfile(false)
