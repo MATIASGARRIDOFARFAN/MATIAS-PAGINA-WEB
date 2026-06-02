@@ -1,6 +1,7 @@
 import type { Product, Seller, TransactionType, Condition, MaterialStatus } from "@/lib/data"
 import type { Product as DbProduct, User } from "@prisma/client"
 import { prisma } from "@/lib/prisma"
+import { normalizeAvatarUrl } from "@/lib/security"
 
 type ProductWithSeller = DbProduct & { seller: User }
 
@@ -18,7 +19,7 @@ export function mapDbProduct(row: ProductWithSeller): Product {
     id: row.seller.id,
     name: row.seller.name,
     email: row.seller.email,
-    avatar: row.seller.avatar,
+    avatar: normalizeAvatarUrl(row.seller.avatar) || row.seller.avatar,
     faculty: row.seller.faculty ?? row.faculty,
     career: row.seller.career ?? row.career,
     verified: row.seller.verified,

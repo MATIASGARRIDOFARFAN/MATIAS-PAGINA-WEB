@@ -25,6 +25,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { StatusBadge } from "@/components/status-badge"
+import { normalizeAvatarUrl } from "@/lib/security"
 
 interface ProfileUser {
   id: string
@@ -79,9 +80,10 @@ export function ProfileContent({ user: initialUser, initialProducts, stats }: Pr
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ avatar: data.url }),
         })
-        const data2 = await res2.json()
-        console.log("Avatar PATCH response:", data2)
-        setUser((u) => ({ ...u, avatar: data.url }))
+        if (res2.ok) {
+          const saved = normalizeAvatarUrl(data.url) || data.url
+          setUser((u) => ({ ...u, avatar: saved }))
+        }
       }
     } finally {
       setUploadingAvatar(false)
@@ -102,12 +104,16 @@ export function ProfileContent({ user: initialUser, initialProducts, stats }: Pr
       const res = await fetch("/api/profile", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ firstName, lastName, bio, phone, avatar: user.avatar }),
+        body: JSON.stringify({ firstName, lastName, bio, phone }),
       })
       const data = await res.json()
-      if (res.ok) {
-        const currentAvatar = user.avatar
-        setUser((u) => ({ ...u, ...data.user, name: data.user.name, avatar: currentAvatar }))
+      if (res.ok && data.user) {
+        setUser((u) => ({
+          ...u,
+          ...data.user,
+          name: data.user.name,
+          avatar: normalizeAvatarUrl(data.user.avatar) || u.avatar,
+        }))
       }
     } finally {
       setSavingProfile(false)
@@ -144,16 +150,14 @@ export function ProfileContent({ user: initialUser, initialProducts, stats }: Pr
     }
   }
 
+  const avatarSrc = normalizeAvatarUrl(user.avatar) || "/placeholder.svg"
+
   return (
     <>
       <div className="flex flex-col gap-4 rounded-2xl border border-border bg-card p-6 sm:flex-row sm:items-center">
         <div className="relative">
           <Avatar className="size-20">
-            {user.avatar && user.avatar !== "/placeholder.svg" ? (
-              <img src={user.avatar} alt={user.name} className="size-full rounded-full object-cover" />
-            ) : (
-              <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
-            )}
+            <AvatarImage key={avatarSrc} src={avatarSrc} alt={user.name} />
             <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
           </Avatar>
           <button

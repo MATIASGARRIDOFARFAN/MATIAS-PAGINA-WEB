@@ -5,6 +5,7 @@ import { ProfileContent } from "@/components/profile-content"
 import { getSession } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { getProductsBySellerId } from "@/lib/products-db"
+import { normalizeAvatarUrl } from "@/lib/security"
 
 export const metadata = {
   title: "Mi perfil · USMP Market",
@@ -47,6 +48,7 @@ export default async function ProfilePage() {
           <ProfileContent
             user={{
               ...user,
+              avatar: normalizeAvatarUrl(user.avatar) || user.avatar,
               verified: user.emailVerified,
               badges: user.emailVerified ? ["Estudiante Verificado"] : [],
             }}

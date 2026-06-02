@@ -2,7 +2,7 @@ import { NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { requireVerifiedAuth } from "@/lib/api-helpers"
 import { getProductsBySellerId } from "@/lib/products-db"
-import { sanitizeText, sanitizeOptional } from "@/lib/security"
+import { sanitizeText, sanitizeOptional, sanitizeUrl, normalizeAvatarUrl } from "@/lib/security"
 import { fullName } from "@/lib/types"
 
 export async function GET() {
@@ -19,7 +19,7 @@ export async function GET() {
       name: auth.user!.name,
       email: auth.user!.email,
       bio: auth.user!.bio,
-      avatar: auth.user!.avatar,
+      avatar: normalizeAvatarUrl(auth.user!.avatar),
       phone: auth.user!.phone,
       faculty: auth.user!.faculty,
       career: auth.user!.career,
@@ -47,7 +47,7 @@ export async function PATCH(request: Request) {
     const firstName = body.firstName != null ? sanitizeText(String(body.firstName), 100) : undefined
     const lastName = body.lastName != null ? sanitizeText(String(body.lastName), 100) : undefined
     const bio = body.bio !== undefined ? sanitizeOptional(body.bio, 500) : undefined
-    const avatar = body.avatar != null ? sanitizeText(String(body.avatar), 500) : undefined
+    const avatar = body.avatar != null ? sanitizeUrl(String(body.avatar), 500) : undefined
     const phone = body.phone !== undefined ? sanitizeOptional(body.phone, 20) : undefined
 
     const updated = await prisma.user.update({
@@ -83,7 +83,12 @@ export async function PATCH(request: Request) {
       },
     })
 
-    return NextResponse.json({ user: updated })
+    return NextResponse.json({
+      user: {
+        ...updated,
+        avatar: normalizeAvatarUrl(updated.avatar) || updated.avatar,
+      },
+    })
   } catch {
     return NextResponse.json({ error: "Error al actualizar perfil" }, { status: 500 })
   }
