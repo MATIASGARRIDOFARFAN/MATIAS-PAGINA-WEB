@@ -9,7 +9,6 @@ import { Badge } from "@/components/ui/badge"
 export default function AdminPage() {
   const [stats, setStats] = useState<Record<string, number>>({})
   const [users, setUsers] = useState<Array<Record<string, unknown>>>([])
-  const [reports, setReports] = useState<Array<Record<string, unknown>>>([])
   const [tab, setTab] = useState("overview")
   const [error, setError] = useState("")
 
@@ -22,7 +21,6 @@ export default function AdminPage() {
     }
     if (section === "overview") setStats(data.stats)
     if (section === "users") setUsers(data.users)
-    if (section === "reports") setReports(data.reports)
   }
 
   useEffect(() => {
@@ -57,9 +55,9 @@ export default function AdminPage() {
         <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
           <h1 className="text-2xl font-bold">Panel de administración</h1>
           <div className="mt-4 flex gap-2">
-            {["overview", "users", "reports"].map((t) => (
+            {["overview", "users"].map((t) => (
               <Button key={t} variant={tab === t ? "default" : "outline"} size="sm" onClick={() => setTab(t)}>
-                {t === "overview" ? "Resumen" : t === "users" ? "Usuarios" : "Reportes"}
+                {t === "overview" ? "Resumen" : "Usuarios"}
               </Button>
             ))}
           </div>
@@ -98,24 +96,6 @@ export default function AdminPage() {
                       {u.suspended ? "Reactivar" : "Suspender"}
                     </Button>
                   </div>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {tab === "reports" && (
-            <div className="mt-6 space-y-2">
-              {reports.map((r) => (
-                <div key={String(r.id)} className="rounded-lg border border-border p-3">
-                  <p className="text-sm">{String(r.reason)}</p>
-                  <p className="text-xs text-muted-foreground">Estado: {String(r.status)}</p>
-                  <Button
-                    size="sm"
-                    className="mt-2"
-                    onClick={() => action({ action: "resolve_report", reportId: String(r.id) })}
-                  >
-                    Marcar resuelto
-                  </Button>
                 </div>
               ))}
             </div>
