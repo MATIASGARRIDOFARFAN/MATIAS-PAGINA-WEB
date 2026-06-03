@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Star } from "lucide-react"
-import { normalizeAvatarUrl } from "@/lib/security"
+
 
 interface Rating {
   id: string

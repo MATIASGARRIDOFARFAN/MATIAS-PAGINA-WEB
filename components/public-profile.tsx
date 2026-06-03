@@ -11,6 +11,8 @@ import { type Product } from "@/lib/data"
 import { normalizeAvatarUrl } from "@/lib/security"
 import { transactionLabels } from "@/lib/data"
 import { RateUserDialog } from "@/components/rate-user-dialog"
+import { ReviewsSection } from "@/components/reviews-section"
+
 
 interface PublicUser {
   id: string
