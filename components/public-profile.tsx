@@ -127,6 +127,7 @@ export function PublicProfile({
         toUserName={user.name}
         requestId=""
       />
+      <ReviewsSection userId={user.id} />
     </>
   )
 }
