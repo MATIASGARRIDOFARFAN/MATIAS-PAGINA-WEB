@@ -49,14 +49,11 @@ export async function GET(request: Request) {
     return NextResponse.json({ reports })
   }
 
-  const [userCount, productCount, reportCount, pendingReports] = await Promise.all([
+  const [userCount, productCount] = await Promise.all([
     prisma.user.count(),
     prisma.product.count(),
-    prisma.report.count(),
-    prisma.report.count({ where: { status: "pendiente" } }),
-  ])
-
-  return NextResponse.json({ stats: { userCount, productCount, reportCount, pendingReports } })
+   ])
+   return NextResponse.json({ stats: { userCount, productCount } })
 }
 
 export async function PATCH(request: Request) {
