@@ -147,7 +147,7 @@ export function InternalMessenger({
   }
 
   return (
-    <div className="grid h-[560px] overflow-hidden rounded-2xl border border-border bg-card sm:grid-cols-[280px_1fr]">
+    <div className="grid h-[calc(100vh-200px)] min-h-[400px] overflow-hidden rounded-2xl border border-border bg-card sm:grid-cols-[280px_1fr]">
       <div className="hidden border-r border-border sm:block overflow-y-auto">
         {conversations.length === 0 ? (
           <p className="p-4 text-sm text-muted-foreground">No tienes conversaciones aún.</p>

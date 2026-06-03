@@ -10,6 +10,7 @@ import { RatingDisplay } from "@/components/rating-stars"
 import { type Product } from "@/lib/data"
 import { normalizeAvatarUrl } from "@/lib/security"
 import { transactionLabels } from "@/lib/data"
+import { RateUserDialog } from "@/components/rate-user-dialog"
 
 interface PublicUser {
   id: string
@@ -79,11 +80,6 @@ export function PublicProfile({
             </Link>
           </Button>
         )}
-        {isOwnProfile && (
-          <Button asChild variant="outline">
-            <Link href="/perfil">Editar mi perfil</Link>
-          </Button>
-        )}
       </div>
 
       <div className="mt-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
@@ -126,6 +122,11 @@ export function PublicProfile({
           ))}
         </div>
       )}
+      <RateUserDialog
+        toUserId={user.id}
+        toUserName={user.name}
+        requestId=""
+      />
     </>
   )
 }
