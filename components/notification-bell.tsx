@@ -35,6 +35,7 @@ const CHAT_NOTIFICATION_TYPES = new Set([
   "request_rejected",
   "purchase_completed",
   "loan_completed",
+  "loan_return_reminder",
   "message_received",
 ])
 

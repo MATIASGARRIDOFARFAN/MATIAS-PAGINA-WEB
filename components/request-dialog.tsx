@@ -1,12 +1,19 @@
 "use client"
 
 import { useState } from "react"
-import { Repeat, ShoppingCart, CheckCircle2, ShieldCheck, Loader2 } from "lucide-react"
+import { useRouter } from "next/navigation"
+import { format } from "date-fns"
+import { es } from "date-fns/locale"
+import { Repeat, CalendarIcon, Loader2, ShieldCheck } from "lucide-react"
 import type { Product } from "@/lib/data"
 import { canRequestProduct } from "@/lib/product-availability"
+import { buildChatUrl } from "@/lib/chat-navigation"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
+import { Calendar } from "@/components/ui/calendar"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { cn } from "@/lib/utils"
 import {
   Dialog,
   DialogContent,
@@ -21,23 +28,19 @@ export function RequestDialog({
   mode,
 }: {
   product: Product
-  mode: "compra" | "prestamo" | "intercambio"
+  mode: "prestamo" | "intercambio"
 }) {
+  const router = useRouter()
   const [open, setOpen] = useState(false)
-  const [done, setDone] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
+  const [returnDate, setReturnDate] = useState<Date | undefined>()
   const [message, setMessage] = useState(
-    mode === "intercambio"
-      ? `Hola, me interesa intercambiar por "${product.title}". Coordinemos en una zona segura del campus.`
-      : mode === "prestamo"
-        ? `Hola, me gustaría solicitar en préstamo "${product.title}".`
-        : `Hola, estoy interesado/a en "${product.title}". ¿Sigue disponible?`,
+    mode === "intercambio" ? "" : `Solicitud de préstamo de "${product.title}".`,
   )
 
   const labels = {
-    compra: { title: "Solicitar compra", btn: "Solicitar material", icon: ShoppingCart },
-    prestamo: { title: "Solicitar préstamo", btn: "Solicitar préstamo", icon: ShoppingCart },
+    prestamo: { title: "Solicitar préstamo", btn: "Solicitar préstamo", icon: CalendarIcon },
     intercambio: { title: "Proponer intercambio", btn: "Proponer intercambio", icon: Repeat },
   }
   const cfg = labels[mode]
@@ -49,13 +52,27 @@ export function RequestDialog({
   )
 
   async function submit() {
+    if (mode === "intercambio" && !message.trim()) {
+      setError("Indica qué material ofreces a cambio")
+      return
+    }
+    if (mode === "prestamo" && !returnDate) {
+      setError("Selecciona la fecha de devolución")
+      return
+    }
+
     setLoading(true)
     setError("")
     try {
       const res = await fetch("/api/requests", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ productId: product.id, type: mode, message }),
+        body: JSON.stringify({
+          productId: product.id,
+          type: mode,
+          message: message.trim(),
+          returnDate: returnDate?.toISOString(),
+        }),
       })
       const data = await res.json()
       if (!res.ok) {
@@ -63,7 +80,14 @@ export function RequestDialog({
         if (data.warnings) setError(data.warnings.join(" "))
         return
       }
-      setDone(true)
+      setOpen(false)
+      router.push(
+        buildChatUrl({
+          sellerId: product.seller.id,
+          productId: product.id,
+          conversationId: data.conversationId,
+        }),
+      )
     } catch {
       setError("Error de conexión")
     } finally {
@@ -73,56 +97,89 @@ export function RequestDialog({
 
   if (!available) return null
 
+  const minReturn = new Date()
+  minReturn.setHours(0, 0, 0, 0)
+
   return (
     <Dialog
       open={open}
       onOpenChange={(o) => {
         setOpen(o)
-        if (!o) setTimeout(() => { setDone(false); setError("") }, 200)
+        if (!o) setError("")
       }}
     >
       <DialogTrigger asChild>
-        <Button size="lg" variant={mode === "intercambio" ? "outline" : "default"} className="gap-2">
+        <Button size="lg" variant="outline" className="gap-2">
           <Icon className="size-4" />
           {cfg.btn}
         </Button>
       </DialogTrigger>
       <DialogContent>
-        {done ? (
-          <div className="flex flex-col items-center py-6 text-center">
-            <CheckCircle2 className="size-14 text-primary" />
-            <h2 className="mt-4 text-xl font-semibold">Solicitud enviada</h2>
-            <p className="mt-2 text-sm text-muted-foreground">
-              {product.seller.name} fue notificado por correo institucional y en la plataforma. Usa Mensajes para
-              coordinar.
-            </p>
-            <Button className="mt-6 w-full" onClick={() => setOpen(false)}>
-              Entendido
-            </Button>
+        <DialogHeader>
+          <DialogTitle>{cfg.title}</DialogTitle>
+          <DialogDescription>
+            Se creará la solicitud y abrirás el chat con el vendedor para coordinar.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="flex items-center gap-2 rounded-lg border border-border bg-accent/50 p-3 text-sm text-primary">
+          <ShieldCheck className="size-4 shrink-0" />
+          <span>El propietario verá tu solicitud en el chat y podrá aceptarla o rechazarla.</span>
+        </div>
+
+        {mode === "intercambio" && (
+          <div className="space-y-2">
+            <Label htmlFor="req-offer">¿Qué ofreces a cambio?</Label>
+            <Textarea
+              id="req-offer"
+              rows={4}
+              placeholder='Ej: "Libro de Cálculo 2, buen estado"'
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
+            />
           </div>
-        ) : (
+        )}
+
+        {mode === "prestamo" && (
           <>
-            <DialogHeader>
-              <DialogTitle>{cfg.title}</DialogTitle>
-              <DialogDescription>
-                Comunicación 100% interna. No se comparten teléfonos ni correos personales.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="flex items-center gap-2 rounded-lg border border-border bg-accent/50 p-3 text-sm text-primary">
-              <ShieldCheck className="size-4 shrink-0" />
-              <span>El propietario recibirá notificación en la plataforma y en su @usmp.pe</span>
+            <div className="space-y-2">
+              <Label>Fecha de devolución</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "w-full justify-start text-left font-normal",
+                      !returnDate && "text-muted-foreground",
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 size-4" />
+                    {returnDate
+                      ? format(returnDate, "PPP", { locale: es })
+                      : "Seleccionar fecha"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={returnDate}
+                    onSelect={setReturnDate}
+                    disabled={(date) => date < minReturn}
+                    locale={es}
+                  />
+                </PopoverContent>
+              </Popover>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="req-msg">Mensaje</Label>
-              <Textarea id="req-msg" rows={4} value={message} onChange={(e) => setMessage(e.target.value)} />
+              <Label htmlFor="req-msg">Mensaje (opcional)</Label>
+              <Textarea id="req-msg" rows={2} value={message} onChange={(e) => setMessage(e.target.value)} />
             </div>
-            {error && <p className="text-sm text-destructive">{error}</p>}
-            <Button size="lg" className="w-full gap-2" onClick={submit} disabled={loading || !message.trim()}>
-              {loading ? <Loader2 className="size-4 animate-spin" /> : <Icon className="size-4" />}
-              Enviar solicitud
-            </Button>
           </>
         )}
+
+        {error && <p className="text-sm text-destructive">{error}</p>}
+        <Button size="lg" className="w-full gap-2" onClick={submit} disabled={loading}>
+          {loading ? <Loader2 className="size-4 animate-spin" /> : "Confirmar y abrir chat"}
+        </Button>
       </DialogContent>
     </Dialog>
   )

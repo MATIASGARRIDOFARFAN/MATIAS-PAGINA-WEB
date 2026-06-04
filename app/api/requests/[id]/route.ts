@@ -2,15 +2,9 @@ import { NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { requireVerifiedAuth, getOrCreateConversation } from "@/lib/api-helpers"
 import { createNotification } from "@/lib/notifications"
-import { recordTransactionHistory, updateRequestHistoryStatus } from "@/lib/history"
-import type { ProductStatus } from "@/lib/types"
+import { updateRequestHistoryStatus } from "@/lib/history"
 import { syncProductAvailability } from "@/lib/product-availability"
-
-const STATUS_MAP: Record<string, ProductStatus> = {
-  compra: "vendido",
-  prestamo: "prestado",
-  intercambio: "intercambiado",
-}
+import { acceptMaterialRequest, confirmLoanReturn } from "@/lib/request-actions"
 
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const auth = await requireVerifiedAuth()
@@ -37,33 +31,25 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
       return NextResponse.json({ error: "La solicitud ya fue procesada" }, { status: 400 })
     }
 
-    const updated = await prisma.materialRequest.update({
-      where: { id },
-      data: { status: "aceptada" },
-    })
-
-    await updateRequestHistoryStatus(id, "aceptada")
-
-    const conversation = await getOrCreateConversation(
-      materialRequest.requesterId,
-      materialRequest.ownerId,
-      materialRequest.productId,
-    )
-
-    await createNotification({
-      userId: materialRequest.requesterId,
-      type: "request_accepted",
-      title: "Solicitud aceptada",
-      body: `Tu solicitud de "${materialRequest.product.title}" fue aceptada.`,
-      metadata: {
-        requestId: id,
+    try {
+      const updated = await acceptMaterialRequest({
+        id: materialRequest.id,
         productId: materialRequest.productId,
-        otherUserId: materialRequest.ownerId,
-        conversationId: conversation.id,
-      },
-    })
-
-    return NextResponse.json({ request: updated })
+        requesterId: materialRequest.requesterId,
+        ownerId: materialRequest.ownerId,
+        type: materialRequest.type,
+        returnDate: materialRequest.returnDate,
+        product: {
+          id: materialRequest.product.id,
+          title: materialRequest.product.title,
+          stock: materialRequest.product.stock,
+        },
+      })
+      return NextResponse.json({ request: updated })
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Error al aceptar"
+      return NextResponse.json({ error: msg }, { status: 400 })
+    }
   }
 
   if (action === "reject" && isOwner) {
@@ -77,8 +63,13 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     })
 
     await syncProductAvailability(materialRequest.productId)
-
     await updateRequestHistoryStatus(id, "rechazada")
+
+    const conversation = await getOrCreateConversation(
+      materialRequest.requesterId,
+      materialRequest.ownerId,
+      materialRequest.productId,
+    )
 
     await createNotification({
       userId: materialRequest.requesterId,
@@ -89,83 +80,54 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
         requestId: id,
         productId: materialRequest.productId,
         otherUserId: materialRequest.ownerId,
+        conversationId: conversation.id,
       },
     })
 
     return NextResponse.json({ request: updated })
   }
 
+  if (action === "return" && isOwner) {
+    if (materialRequest.type !== "prestamo" || materialRequest.status !== "aceptada") {
+      return NextResponse.json({ error: "Solo préstamos activos pueden confirmar devolución" }, { status: 400 })
+    }
+
+    const updated = await confirmLoanReturn({
+      id: materialRequest.id,
+      productId: materialRequest.productId,
+      requesterId: materialRequest.requesterId,
+      ownerId: materialRequest.ownerId,
+      type: materialRequest.type,
+      returnDate: materialRequest.returnDate,
+      product: {
+        id: materialRequest.product.id,
+        title: materialRequest.product.title,
+        stock: materialRequest.product.stock,
+      },
+    })
+
+    return NextResponse.json({ request: updated, canRate: true })
+  }
+
   if (action === "complete" && (isOwner || isRequester)) {
-    if (materialRequest.status !== "aceptada") {
-      return NextResponse.json({ error: "Solo se pueden completar solicitudes aceptadas" }, { status: 400 })
+    if (materialRequest.status !== "aceptada" || materialRequest.type !== "prestamo") {
+      return NextResponse.json({ error: "Usa confirmar devolución para préstamos activos" }, { status: 400 })
+    }
+    if (!isOwner) {
+      return NextResponse.json({ error: "Solo el propietario puede confirmar la devolución" }, { status: 403 })
     }
 
-    const newProductStatus = STATUS_MAP[materialRequest.type] ?? "vendido"
-
-    const updated = await prisma.materialRequest.update({
-      where: { id },
-      data: { status: "completada" },
-    })
-
-    const product = await prisma.product.findUnique({
-      where: { id: materialRequest.productId },
-      select: { stock: true },
-    })
-    const newStock = Math.max(0, (product?.stock ?? 1) - 1)
-
-    await prisma.product.update({
-      where: { id: materialRequest.productId },
-      data: {
-        stock: newStock,
-        status: newStock <= 0 ? newProductStatus : "disponible",
-      },
-    })
-
-    if (newStock > 0) {
-      await syncProductAvailability(materialRequest.productId)
-    }
-
-    const historyType =
-      materialRequest.type === "compra"
-        ? "compra"
-        : materialRequest.type === "prestamo"
-          ? "prestamo"
-          : "intercambio"
-
-    await recordTransactionHistory(
-      id,
-      materialRequest.productId,
-      materialRequest.requesterId,
-      materialRequest.ownerId,
-      historyType,
-    )
-
-    const notifType =
-      materialRequest.type === "prestamo" ? "loan_completed" : "purchase_completed"
-
-    await createNotification({
-      userId: materialRequest.requesterId,
-      type: notifType,
-      title: "Transacción completada",
-      body: `Se completó la operación de "${materialRequest.product.title}". Puedes calificar al usuario.`,
-      metadata: {
-        requestId: id,
-        productId: materialRequest.productId,
-        otherUserId: materialRequest.ownerId,
-        canRate: true,
-      },
-    })
-
-    await createNotification({
-      userId: materialRequest.ownerId,
-      type: notifType,
-      title: "Transacción completada",
-      body: `Se completó la operación de "${materialRequest.product.title}". Puedes calificar al usuario.`,
-      metadata: {
-        requestId: id,
-        productId: materialRequest.productId,
-        otherUserId: materialRequest.requesterId,
-        canRate: true,
+    const updated = await confirmLoanReturn({
+      id: materialRequest.id,
+      productId: materialRequest.productId,
+      requesterId: materialRequest.requesterId,
+      ownerId: materialRequest.ownerId,
+      type: materialRequest.type,
+      returnDate: materialRequest.returnDate,
+      product: {
+        id: materialRequest.product.id,
+        title: materialRequest.product.title,
+        stock: materialRequest.product.stock,
       },
     })
 

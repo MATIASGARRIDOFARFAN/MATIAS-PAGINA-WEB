@@ -45,6 +45,7 @@ export const HISTORY_TYPE_LABELS: Record<string, string> = {
   message_received: "Mensaje",
   purchase_completed: "Compra completada",
   loan_completed: "Préstamo completado",
+  loan_return_reminder: "Recordatorio de devolución",
   rating_received: "Calificación",
   login_alert: "Inicio de sesión",
 }
@@ -56,6 +57,7 @@ export const NOTIFICATION_TYPES = {
   MESSAGE_RECEIVED: "message_received",
   PURCHASE_COMPLETED: "purchase_completed",
   LOAN_COMPLETED: "loan_completed",
+  LOAN_RETURN_REMINDER: "loan_return_reminder",
   RATING_RECEIVED: "rating_received",
   LOGIN_ALERT: "login_alert",
 } as const

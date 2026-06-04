@@ -96,15 +96,17 @@ model Favorite {
 }
 
 model MaterialRequest {
-  id          String   @id @default(cuid())
-  productId   String
-  requesterId String
-  ownerId     String
-  type        String
-  status      String   @default("pendiente")
-  message     String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id                  String    @id @default(cuid())
+  productId           String
+  requesterId         String
+  ownerId             String
+  type                String
+  status              String    @default("pendiente")
+  message             String?
+  returnDate          DateTime?
+  returnReminderSent  Boolean   @default(false)
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
 
   product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
   requester User    @relation("Requester", fields: [requesterId], references: [id], onDelete: Cascade)

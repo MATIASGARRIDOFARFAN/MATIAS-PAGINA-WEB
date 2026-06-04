@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { normalizeAvatarUrl } from "@/lib/security"
+import { ChatRequestCard, type ChatMaterialRequest } from "@/components/chat-request-card"
 
 interface Conversation {
   id: string
@@ -41,6 +42,7 @@ export function InternalMessenger({
   const [text, setText] = useState("")
   const [warning, setWarning] = useState<string | null>(null)
   const [myId, setMyId] = useState<string | null>(null)
+  const [materialRequest, setMaterialRequest] = useState<ChatMaterialRequest | null>(null)
   const messagesContainerRef = useRef<HTMLDivElement>(null)
 
   async function loadConversations() {
@@ -69,6 +71,21 @@ export function InternalMessenger({
     }
   }
 
+  async function loadMaterialRequest(productId: string | undefined, otherUserId: string) {
+    if (!productId) {
+      setMaterialRequest(null)
+      return
+    }
+    const params = new URLSearchParams({ productId, otherUserId })
+    const res = await fetch(`/api/requests?${params}`)
+    if (!res.ok) {
+      setMaterialRequest(null)
+      return
+    }
+    const data = await res.json()
+    setMaterialRequest(data.request ?? null)
+  }
+
   async function loadMessages(convId: string, scrollToBottom = false) {
     const res = await fetch(`/api/conversations/${convId}/messages`)
     if (!res.ok) return
@@ -91,11 +108,25 @@ export function InternalMessenger({
   }, [])
 
   useEffect(() => {
-    if (!activeId) return
+    if (!activeId) {
+      setMaterialRequest(null)
+      return
+    }
+    const conv = conversations.find((c) => c.id === activeId)
+    if (conv?.product?.id) {
+      loadMaterialRequest(conv.product.id, conv.otherUser.id)
+    } else {
+      setMaterialRequest(null)
+    }
     loadMessages(activeId, false)
-    const interval = setInterval(() => loadMessages(activeId, false), 5000)
+    const interval = setInterval(() => {
+      loadMessages(activeId, false)
+      if (conv?.product?.id) {
+        loadMaterialRequest(conv.product.id, conv.otherUser.id)
+      }
+    }, 5000)
     return () => clearInterval(interval)
-  }, [activeId])
+  }, [activeId, conversations])
 
   async function send(e: React.FormEvent) {
     e.preventDefault()
@@ -200,6 +231,19 @@ export function InternalMessenger({
               <ShieldAlert className="size-3.5 shrink-0" />
               No compartas teléfonos, correos personales ni enlaces. Toda la comunicación es interna.
             </div>
+
+            {materialRequest && myId && (
+              <ChatRequestCard
+                request={materialRequest}
+                currentUserId={myId}
+                onUpdated={() => {
+                  if (active?.product?.id) {
+                    loadMaterialRequest(active.product.id, active.otherUser.id)
+                  }
+                  loadConversations()
+                }}
+              />
+            )}
 
             <div
               ref={messagesContainerRef}

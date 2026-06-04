@@ -182,26 +182,11 @@ export function ProductDetail({ product }: { product: Product }) {
           </div>
 
           <div className="mt-6 flex flex-col gap-3">
-            {canRequestProduct(
-              product.status,
-              product.stock,
-              product.activeRequests ?? 0,
-            ) ? (
-              <>
-                {canBuy && <CheckoutDialog product={product} />}
-                {canExchange && <RequestDialog product={product} mode="intercambio" />}
-                <RequestDialog product={product} mode="prestamo" />
-              </>
-            ) : (
-              <div className="rounded-lg border border-border bg-muted p-4 text-center text-sm text-muted-foreground">
-                Este material ya no acepta solicitudes ({product.status}).
-              </div>
-            )}
             <div className="flex gap-3">
-              <Button asChild variant="secondary" size="lg" className="flex-1 gap-2">
+              <Button asChild size="lg" className="flex-1 gap-2">
                 <Link href={contactHref}>
                   <MessageCircle className="size-4" />
-                  Mensaje interno
+                  Contactar al vendedor
                 </Link>
               </Button>
               <Button
@@ -216,6 +201,21 @@ export function ProductDetail({ product }: { product: Product }) {
                 {fav ? "Guardado" : "Guardar"}
               </Button>
             </div>
+            {canRequestProduct(
+              product.status,
+              product.stock,
+              product.activeRequests ?? 0,
+            ) ? (
+              <div className="flex flex-col gap-2">
+                {canBuy && <CheckoutDialog product={product} />}
+                {canExchange && <RequestDialog product={product} mode="intercambio" />}
+                <RequestDialog product={product} mode="prestamo" />
+              </div>
+            ) : (
+              <div className="rounded-lg border border-border bg-muted p-4 text-center text-sm text-muted-foreground">
+                Este material ya no acepta solicitudes ({product.status}).
+              </div>
+            )}
             <p className="flex items-start gap-1.5 text-xs text-muted-foreground">
               <ShieldCheck className="mt-0.5 size-3.5 shrink-0 text-primary" />
               Por tu seguridad, la coordinación se realiza solo por mensajería interna y correo institucional. No

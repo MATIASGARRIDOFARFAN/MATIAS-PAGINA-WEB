@@ -7,10 +7,45 @@ import { recordRequestHistory } from "@/lib/history"
 import { canRequestProduct, countActiveRequests, syncProductAvailability } from "@/lib/product-availability"
 import { filterMessageContent } from "@/lib/message-filter"
 import { getOrCreateConversation } from "@/lib/api-helpers"
+import { processLoanReturnReminders } from "@/lib/loan-reminders"
 
-export async function GET() {
+function parseReturnDate(raw: unknown): Date | null {
+  if (!raw) return null
+  const d = new Date(String(raw))
+  if (Number.isNaN(d.getTime())) return null
+  d.setHours(12, 0, 0, 0)
+  return d
+}
+
+export async function GET(request: Request) {
   const auth = await requireVerifiedAuth()
   if (auth.error) return NextResponse.json({ error: auth.error }, { status: auth.status! })
+
+  await processLoanReturnReminders()
+
+  const { searchParams } = new URL(request.url)
+  const productId = searchParams.get("productId")
+  const otherUserId = searchParams.get("otherUserId")
+
+  if (productId && otherUserId) {
+    const open = await prisma.materialRequest.findFirst({
+      where: {
+        productId,
+        status: { in: ["pendiente", "aceptada"] },
+        OR: [
+          { requesterId: auth.user!.id, ownerId: otherUserId },
+          { requesterId: otherUserId, ownerId: auth.user!.id },
+        ],
+      },
+      include: {
+        product: { select: { id: true, title: true, images: true, status: true } },
+        requester: { select: { id: true, name: true, avatar: true } },
+        owner: { select: { id: true, name: true, avatar: true } },
+      },
+      orderBy: { createdAt: "desc" },
+    })
+    return NextResponse.json({ request: open })
+  }
 
   const [sent, received] = await Promise.all([
     prisma.materialRequest.findMany({
@@ -42,7 +77,19 @@ export async function POST(request: Request) {
     const body = await request.json()
     const productId = String(body.productId ?? "")
     const type = String(body.type ?? "compra") as "compra" | "prestamo" | "intercambio"
+    const returnDate = type === "prestamo" ? parseReturnDate(body.returnDate) : null
     let message = sanitizeText(String(body.message ?? ""), 1000)
+
+    if (type === "prestamo") {
+      if (!returnDate) {
+        return NextResponse.json({ error: "Indica la fecha de devolución" }, { status: 400 })
+      }
+      const minDate = new Date()
+      minDate.setHours(0, 0, 0, 0)
+      if (returnDate < minDate) {
+        return NextResponse.json({ error: "La fecha de devolución debe ser hoy o posterior" }, { status: 400 })
+      }
+    }
 
     const filter = filterMessageContent(message)
     if (filter.blocked) {
@@ -71,6 +118,7 @@ export async function POST(request: Request) {
         type,
         message,
         status: "pendiente",
+        returnDate: returnDate ?? undefined,
       },
     })
 
@@ -100,7 +148,10 @@ export async function POST(request: Request) {
       },
     })
 
-    return NextResponse.json({ request: materialRequest }, { status: 201 })
+    return NextResponse.json(
+      { request: materialRequest, conversationId: conversation.id },
+      { status: 201 },
+    )
   } catch {
     return NextResponse.json({ error: "Error al enviar solicitud" }, { status: 500 })
   }
