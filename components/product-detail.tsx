@@ -304,5 +304,6 @@ export function ProductDetail({ product }: { product: Product }) {
           <p className="mt-3 text-pretty leading-relaxed text-muted-foreground">{product.description}</p>
         </div>
       </div>
-      )
+    </div>
+  )
 }
