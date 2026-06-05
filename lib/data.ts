@@ -1,4 +1,4 @@
-export type TransactionType = "venta" | "intercambio" | "ambos"
+export type TransactionType = "venta" | "intercambio" | "prestamo" | "ambos"
 export type Condition = "nuevo" | "seminuevo" | "usado"
 export type MaterialStatus = "disponible" | "reservado" | "prestado" | "intercambiado" | "vendido"
 
@@ -66,9 +66,9 @@ export const faculties: Faculty[] = [
     name: "Ingeniería y Arquitectura",
     careers: [
       {
-        id: "sistemas",
-        name: "Ingeniería de Sistemas",
-        courses: ["Programación I", "Base de Datos", "Redes", "Estadística", "Sistemas Operativos"],
+        id: "arquitectura",
+        name: "Arquitectura",
+        courses: ["Diseño Arquitectónico", "Urbanismo", "Dibujo Técnico", "Maquetería"],
       },
       {
         id: "civil",
@@ -76,24 +76,68 @@ export const faculties: Faculty[] = [
         courses: ["Estática", "Resistencia de Materiales", "Topografía", "Hidráulica"],
       },
       {
-        id: "arquitectura",
-        name: "Arquitectura",
-        courses: ["Diseño Arquitectónico", "Urbanismo", "Dibujo Técnico", "Maquetería"],
+        id: "industrial",
+        name: "Ingeniería Industrial",
+        courses: [],
+      },
+      {
+        id: "computacion",
+        name: "Ingeniería de Computación y Sistemas",
+        courses: ["Programación I", "Base de Datos", "Redes", "Estadística", "Sistemas Operativos"],
+      },
+      {
+        id: "ia-robotica",
+        name: "Ingeniería en Inteligencia Artificial y Robótica",
+        courses: [],
       },
     ],
   },
   {
-    id: "administracion",
-    name: "Ciencias Administrativas",
+    id: "comunicacion",
+    name: "Ciencias de la Comunicación",
+    careers: [
+      { id: "turismo", name: "Turismo", courses: [] },
+      { id: "psicologia", name: "Psicología", courses: [] },
+    ],
+  },
+  {
+    id: "derecho",
+    name: "Derecho",
     careers: [
       {
-        id: "administracion",
-        name: "Administración",
+        id: "derecho",
+        name: "Derecho",
+        courses: ["Derecho Civil", "Derecho Penal", "Derecho Constitucional"],
+      },
+    ],
+  },
+  {
+    id: "odontologia",
+    name: "Odontología",
+    careers: [{ id: "odontologia", name: "Odontología", courses: [] }],
+  },
+  {
+    id: "obstetricia",
+    name: "Obstetricia y Enfermería",
+    careers: [{ id: "enfermeria", name: "Enfermería", courses: [] }],
+  },
+  {
+    id: "contables",
+    name: "Ciencias Contables, Económicas y Financieras",
+    careers: [{ id: "contabilidad", name: "Contabilidad y Finanzas", courses: [] }],
+  },
+  {
+    id: "administracion",
+    name: "Ciencias Administrativas y Recursos Humanos",
+    careers: [
+      {
+        id: "admin-empresas",
+        name: "Administración de Empresas",
         courses: ["Marketing", "Finanzas", "Contabilidad", "Recursos Humanos"],
       },
       {
-        id: "negocios",
-        name: "Negocios Internacionales",
+        id: "admin-negocios",
+        name: "Administración de Negocios Internacionales",
         courses: ["Comercio Exterior", "Logística", "Economía"],
       },
     ],
@@ -106,17 +150,6 @@ export const faculties: Faculty[] = [
         id: "medicina",
         name: "Medicina",
         courses: ["Anatomía", "Fisiología", "Bioquímica", "Histología"],
-      },
-    ],
-  },
-  {
-    id: "derecho",
-    name: "Derecho y Ciencia Política",
-    careers: [
-      {
-        id: "derecho",
-        name: "Derecho",
-        courses: ["Derecho Civil", "Derecho Penal", "Derecho Constitucional"],
       },
     ],
   },
@@ -409,6 +442,7 @@ export function getCategoryName(id: string) {
 export const transactionLabels: Record<TransactionType, string> = {
   venta: "Venta",
   intercambio: "Intercambio",
+  prestamo: "Préstamo",
   ambos: "Venta o intercambio",
 }
 

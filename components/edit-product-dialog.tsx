@@ -42,7 +42,6 @@ export function EditProductDialog({ product, open, onOpenChange, onSaved }: Edit
   const [category, setCategory] = useState("")
   const [facultyId, setFacultyId] = useState("")
   const [career, setCareer] = useState("")
-  const [course, setCourse] = useState("")
   const [condition, setCondition] = useState("")
   const [transaction, setTransaction] = useState("")
   const [location, setLocation] = useState("")
@@ -53,7 +52,6 @@ export function EditProductDialog({ product, open, onOpenChange, onSaved }: Edit
 
   const facultyName = faculties.find((f) => f.id === facultyId)?.name ?? ""
   const careers = faculties.find((f) => f.id === facultyId)?.careers ?? []
-  const courses = careers.find((c) => c.name === career)?.courses ?? []
 
   function resetFromProduct(p: Product) {
     setTitle(p.title)
@@ -62,7 +60,6 @@ export function EditProductDialog({ product, open, onOpenChange, onSaved }: Edit
     const faculty = faculties.find((f) => f.name === p.faculty)
     setFacultyId(faculty?.id ?? "")
     setCareer(p.career)
-    setCourse(p.course)
     setCondition(p.condition)
     setTransaction(p.transaction)
     setLocation(p.location)
@@ -91,13 +88,13 @@ export function EditProductDialog({ product, open, onOpenChange, onSaved }: Edit
           title,
           description,
           category,
-          faculty: facultyName || product.faculty,
-          career,
-          course,
+          faculty: facultyName || "",
+          career: career || "",
+          course: "",
           condition,
           transaction,
           location,
-          price: transaction === "intercambio" ? 0 : Number(price),
+          price: transaction === "intercambio" || transaction === "prestamo" ? 0 : Number(price),
           stock: Number(stock),
         }),
       })
@@ -176,67 +173,50 @@ export function EditProductDialog({ product, open, onOpenChange, onSaved }: Edit
             </div>
           </div>
 
-          <div className="grid gap-4 sm:grid-cols-3">
-            <div className="space-y-2">
-              <Label>Facultad</Label>
-              <Select
-                value={facultyId}
-                onValueChange={(v) => {
-                  setFacultyId(v)
-                  setCareer("")
-                  setCourse("")
-                }}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Facultad" />
-                </SelectTrigger>
-                <SelectContent>
-                  {faculties.map((f) => (
-                    <SelectItem key={f.id} value={f.id}>
-                      {f.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+          <section className="space-y-4 rounded-xl border border-border bg-muted/30 p-4">
+            <h3 className="text-sm font-semibold">Estructura académica (opcional)</h3>
+            <p className="text-xs text-muted-foreground">
+              Puedes indicar facultad y carrera para ayudar a otros estudiantes a encontrar tu material.
+            </p>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label>Facultad</Label>
+                <Select
+                  value={facultyId}
+                  onValueChange={(v) => {
+                    setFacultyId(v)
+                    setCareer("")
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Facultad (opcional)" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {faculties.map((f) => (
+                      <SelectItem key={f.id} value={f.id}>
+                        {f.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Carrera</Label>
+                <Select value={career} onValueChange={setCareer} disabled={!facultyId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Carrera (opcional)" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {careers.map((c) => (
+                      <SelectItem key={c.id} value={c.name}>
+                        {c.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
-            <div className="space-y-2">
-              <Label>Carrera</Label>
-              <Select
-                value={career}
-                onValueChange={(v) => {
-                  setCareer(v)
-                  setCourse("")
-                }}
-                disabled={!facultyId}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Carrera" />
-                </SelectTrigger>
-                <SelectContent>
-                  {careers.map((c) => (
-                    <SelectItem key={c.id} value={c.name}>
-                      {c.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label>Curso</Label>
-              <Select value={course} onValueChange={setCourse} disabled={!career}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Curso" />
-                </SelectTrigger>
-                <SelectContent>
-                  {courses.map((c) => (
-                    <SelectItem key={c} value={c}>
-                      {c}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
+          </section>
 
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
@@ -248,6 +228,7 @@ export function EditProductDialog({ product, open, onOpenChange, onSaved }: Edit
                 <SelectContent>
                   <SelectItem value="venta">Venta</SelectItem>
                   <SelectItem value="intercambio">Intercambio</SelectItem>
+                  <SelectItem value="prestamo">Préstamo</SelectItem>
                   <SelectItem value="ambos">Venta o intercambio</SelectItem>
                 </SelectContent>
               </Select>
@@ -260,7 +241,7 @@ export function EditProductDialog({ product, open, onOpenChange, onSaved }: Edit
                 min={0}
                 value={price}
                 onChange={(e) => setPrice(e.target.value)}
-                disabled={transaction === "intercambio"}
+                disabled={transaction === "intercambio" || transaction === "prestamo"}
               />
             </div>
             <div className="space-y-2">

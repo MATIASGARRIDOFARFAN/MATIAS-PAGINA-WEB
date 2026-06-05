@@ -37,6 +37,7 @@ const conditionOptions: { id: Condition; label: string }[] = [
 const transactionOptions: { id: TransactionType; label: string }[] = [
   { id: "venta", label: "Venta" },
   { id: "intercambio", label: "Intercambio" },
+  { id: "prestamo", label: "Préstamo" },
   { id: "ambos", label: "Venta o intercambio" },
 ]
 

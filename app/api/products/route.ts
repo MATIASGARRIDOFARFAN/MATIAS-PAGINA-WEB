@@ -41,7 +41,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Completa estado, transacción y punto de entrega" }, { status: 400 })
     }
 
-    if (transaction !== "intercambio" && price <= 0) {
+    if (transaction !== "intercambio" && transaction !== "prestamo" && price <= 0) {
       return NextResponse.json({ error: "Indica un precio válido para venta" }, { status: 400 })
     }
 
@@ -49,7 +49,7 @@ export async function POST(request: Request) {
       data: {
         title,
         description,
-        price: transaction === "intercambio" ? 0 : price,
+        price: transaction === "intercambio" || transaction === "prestamo" ? 0 : price,
         images: JSON.stringify(images),
         category,
         faculty,

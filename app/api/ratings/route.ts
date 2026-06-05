@@ -21,13 +21,11 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: "No puedes calificarte a ti mismo" }, { status: 400 })
       }
 
-      const existing = requestId
-        ? await prisma.userRating.findFirst({
-            where: { fromUserId: auth.user!.id, requestId },
-          })
-        : null
-      if (existing) {
-        return NextResponse.json({ error: "Ya calificaste esta transacción" }, { status: 409 })
+      const existingPair = await prisma.userRating.findFirst({
+        where: { fromUserId: auth.user!.id, toUserId },
+      })
+      if (existingPair) {
+        return NextResponse.json({ error: "Ya calificaste a este usuario" }, { status: 409 })
       }
 
       const rating = await prisma.userRating.create({

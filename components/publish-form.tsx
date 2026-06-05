@@ -90,7 +90,7 @@ export function PublishForm() {
           condition,
           transaction,
           location: locationLabels[location] ?? location,
-          price: transaction === "intercambio" ? 0 : Number(price),
+          price: transaction === "intercambio" || transaction === "prestamo" ? 0 : Number(price),
           stock: Number(stock),
           images: images.length > 0 ? images : ["/placeholder.svg"],
         }),
@@ -318,7 +318,7 @@ export function PublishForm() {
               value={price}
               onChange={(e) => setPrice(e.target.value)}
               placeholder="0"
-              disabled={transaction === "intercambio"}
+              disabled={transaction === "intercambio" || transaction === "prestamo"}
             />
           </div>
           <div className="space-y-2">
@@ -340,6 +340,7 @@ export function PublishForm() {
               <SelectContent>
                 <SelectItem value="venta">Venta</SelectItem>
                 <SelectItem value="intercambio">Intercambio</SelectItem>
+                <SelectItem value="prestamo">Préstamo</SelectItem>
                 <SelectItem value="ambos">Venta o intercambio</SelectItem>
               </SelectContent>
             </Select>

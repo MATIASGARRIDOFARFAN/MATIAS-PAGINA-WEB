@@ -38,9 +38,9 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     const title = String(body.title ?? owned.product.title).trim()
     const description = String(body.description ?? owned.product.description).trim()
     const category = String(body.category ?? owned.product.category)
-    const faculty = String(body.faculty ?? owned.product.faculty)
-    const career = String(body.career ?? owned.product.career)
-    const course = String(body.course ?? owned.product.course)
+    const faculty = body.faculty !== undefined ? String(body.faculty) : owned.product.faculty
+    const career = body.career !== undefined ? String(body.career) : owned.product.career
+    const course = body.course !== undefined ? String(body.course) : owned.product.course
     const condition = String(body.condition ?? owned.product.condition)
     const transaction = String(body.transaction ?? owned.product.transaction)
     const location = String(body.location ?? owned.product.location)
@@ -64,17 +64,22 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
         condition,
         transaction,
         location,
-        price: transaction === "intercambio" ? 0 : price,
+        price: transaction === "intercambio" || transaction === "prestamo" ? 0 : price,
         stock: Math.max(1, stock),
         whatsapp: whatsapp || null,
       },
       include: { seller: true },
     })
 
-    await prisma.user.update({
-      where: { id: session.id },
-      data: { faculty, career },
-    })
+    if (faculty || career) {
+      await prisma.user.update({
+        where: { id: session.id },
+        data: {
+          ...(faculty && { faculty }),
+          ...(career && { career }),
+        },
+      })
+    }
 
     return NextResponse.json({ product: mapDbProduct(updated) })
   } catch {

@@ -44,8 +44,9 @@ export function ProductDetail({ product }: { product: Product }) {
   const sellerProfileHref = `/usuario/${product.seller.id}`
   const sellerAvatar = normalizeAvatarUrl(product.seller.avatar) || "/placeholder.svg"
 
-  const canBuy = product.transaction !== "intercambio"
-  const canExchange = product.transaction !== "venta"
+  const showBuy = product.transaction === "venta" || product.transaction === "ambos"
+  const showExchange = product.transaction === "intercambio" || product.transaction === "ambos"
+  const showLoan = product.transaction === "prestamo"
 
   useEffect(() => {
     fetch(`/api/favorites?productId=${product.id}`)
@@ -155,7 +156,11 @@ export function ProductDetail({ product }: { product: Product }) {
           </div>
 
           <p className="mt-5 text-3xl font-bold text-primary">
-            {product.transaction === "intercambio" ? "Solo intercambio" : `S/ ${product.price}`}
+            {product.transaction === "intercambio"
+              ? "Solo intercambio"
+              : product.transaction === "prestamo"
+                ? "Solo préstamo"
+                : `S/ ${product.price}`}
           </p>
           <p className="mt-1 text-sm text-muted-foreground">
             {product.stock} disponible{product.stock > 1 ? "s" : ""}
@@ -207,9 +212,9 @@ export function ProductDetail({ product }: { product: Product }) {
               product.activeRequests ?? 0,
             ) ? (
               <div className="flex flex-col gap-2">
-                {canBuy && <CheckoutDialog product={product} />}
-                {canExchange && <RequestDialog product={product} mode="intercambio" />}
-                <RequestDialog product={product} mode="prestamo" />
+                {showBuy && <CheckoutDialog product={product} />}
+                {showExchange && <RequestDialog product={product} mode="intercambio" />}
+                {showLoan && <RequestDialog product={product} mode="prestamo" />}
               </div>
             ) : (
               <div className="rounded-lg border border-border bg-muted p-4 text-center text-sm text-muted-foreground">

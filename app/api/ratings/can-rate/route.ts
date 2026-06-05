@@ -32,7 +32,7 @@ export async function GET(request: Request) {
   }
 
   const existing = await prisma.userRating.findFirst({
-    where: { fromUserId: auth.user!.id, requestId: completed.id },
+    where: { fromUserId: auth.user!.id, toUserId },
   })
 
   return NextResponse.json({
