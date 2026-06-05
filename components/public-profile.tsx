@@ -12,6 +12,7 @@ import { normalizeAvatarUrl } from "@/lib/security"
 import { transactionLabels } from "@/lib/data"
 import { RateUserDialog } from "@/components/rate-user-dialog"
 import { ReviewsSection } from "@/components/reviews-section"
+import { ReportDialog } from "@/components/report-dialog"
 
 
 interface PublicUser {
@@ -75,12 +76,15 @@ export function PublicProfile({
           </div>
         </div>
         {!isOwnProfile && (
-          <Button asChild className="gap-1.5">
-            <Link href={`/mensajes?to=${user.id}`}>
-              <MessageCircle className="size-4" />
-              Enviar mensaje
-            </Link>
-          </Button>
+          <div className="flex flex-col gap-2 sm:flex-row items-center">
+            <Button asChild className="gap-1.5">
+              <Link href={`/mensajes?to=${user.id}`}>
+                <MessageCircle className="size-4" />
+                Enviar mensaje
+              </Link>
+            </Button>
+            <ReportDialog targetUserId={user.id} label="Reportar usuario" />
+          </div>
         )}
       </div>
 

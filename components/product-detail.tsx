@@ -31,6 +31,7 @@ import { canRequestProduct } from "@/lib/product-availability"
 import { RatingDisplay } from "@/components/rating-stars"
 import { RateUserDialog } from "@/components/rate-user-dialog"
 import { normalizeAvatarUrl } from "@/lib/security"
+import { ReportDialog } from "@/components/report-dialog"
 
 export function ProductDetail({ product }: { product: Product }) {
   const [active, setActive] = useState(0)
@@ -292,14 +293,16 @@ export function ProductDetail({ product }: { product: Product }) {
                 <p className="text-xs text-muted-foreground">Intercambios</p>
               </div>
             </div>
+            <div className="mt-2 flex justify-end">
+              <ReportDialog targetUserId={product.seller.id} targetProductId={product.id} label="Reportar publicación" />
+            </div>
           </div>
         </div>
-      </div>
 
-      <div className="mt-10 max-w-3xl">
-        <h2 className="text-lg font-semibold">Descripción</h2>
-        <p className="mt-3 text-pretty leading-relaxed text-muted-foreground">{product.description}</p>
+        <div className="mt-10 max-w-3xl">
+          <h2 className="text-lg font-semibold">Descripción</h2>
+          <p className="mt-3 text-pretty leading-relaxed text-muted-foreground">{product.description}</p>
+        </div>
       </div>
-    </div>
-  )
+      )
 }
