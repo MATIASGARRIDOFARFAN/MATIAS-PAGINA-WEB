@@ -78,7 +78,7 @@ export async function POST(request: Request) {
     const productId = String(body.productId ?? "")
     const type = String(body.type ?? "compra") as "compra" | "prestamo" | "intercambio"
     const returnDate = type === "prestamo" ? parseReturnDate(body.returnDate) : null
-    let message = sanitizeText(String(body.message ?? ""), 1000)
+    let message = String(body.message ?? "").trim().slice(0, 1000)
 
     if (type === "prestamo") {
       if (!returnDate) {
@@ -139,7 +139,7 @@ export async function POST(request: Request) {
       userId: product.sellerId,
       type: "request_received",
       title: "Nueva solicitud de material",
-      body: `${auth.user!.name} solicitó "${product.title}" (${type}).`,
+      body: `${auth.user!.name} solicitó el material "${product.title}" (${type}).`,
       metadata: {
         requestId: materialRequest.id,
         productId,
